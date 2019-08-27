@@ -21,7 +21,7 @@ public class DiceActivity extends SensorActivity {
     private int mSteps;
     private Random mGenerator;
     private boolean mRolling;
-
+    private BackgroundColor mBackgroundColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

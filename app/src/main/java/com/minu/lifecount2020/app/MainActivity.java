@@ -59,9 +59,7 @@ public class MainActivity extends SensorActivity {
     private TextView mLeftUpdateTextView;
     private TextView mRighyUpdateTextView;
 
-    private boolean mPoisonShowing;
-    private boolean mEnergyShowing;
-    private boolean mHapticFeedbackEnabled;
+    private Settings mSettings;
 
     private ArrayList<String> mOptions;
 
@@ -82,8 +80,6 @@ public class MainActivity extends SensorActivity {
     private float mPickerLastX;
     private boolean mUpdating;
 
-    private int mStartingLife;
-
     private ArrayList<String> mHistory;
 
     private String mShowPoison;
@@ -99,10 +95,8 @@ public class MainActivity extends SensorActivity {
 
     private CountDownTimer mRoundTimer;
     private TextView mRoundTimerTextView;
-    private boolean mTimerShowing;
     private boolean mTimerRunning;
     private long mSavedRoundTime;
-    private int mRoundTime;
     private String mEnergyOption;
     private String mHapticOption;
 
@@ -134,12 +128,8 @@ public class MainActivity extends SensorActivity {
 
             mHistory = savedInstanceState.getStringArrayList(Constants.HISTORY);
             ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).notifyDataSetChanged();
-            mPoisonShowing = savedInstanceState.getBoolean(Constants.POISON);
-            mEnergyShowing = savedInstanceState.getBoolean(Constants.ENERGY);
-            mHapticFeedbackEnabled = savedInstanceState.getBoolean(Constants.ENABLE_HAPTIC);
-            mBackgroundColor =
-                    (BackgroundColor) savedInstanceState.getSerializable(Constants.BACKGROUND_WHITE);
-            mStartingLife = savedInstanceState.getInt(Constants.STARTING_LIFE);
+
+            mSettings = Settings.Companion.fromBundle(savedInstanceState);
 
         } else {
             restoreFromPreferences();
@@ -148,27 +138,28 @@ public class MainActivity extends SensorActivity {
 
     private void restoreSettings() {
         mPoisonOption = mShowPoison;
-        if (mPoisonShowing) {
-            mPoisonShowing = !mPoisonShowing;
+        if (mSettings.getPoisonShowing()) {
+            mSettings.setPoisonShowing(false);
             displayPoison();
         }
-        if (mEnergyShowing) {
-            mEnergyShowing = !mEnergyShowing;
+        if (mSettings.getEnergyShowing()) {
+            mSettings.setEnergyShowing(false);
             displayEnergy();
         }
 
-        if (mTimerShowing) {
-            mTimerShowing = !mTimerShowing;
+        if (mSettings.getTimerShowing()) {
+            mSettings.setTimerShowing(false);
             toggleTimer();
         }
 
-        if (BackgroundColor.GREY == mBackgroundColor)
+        BackgroundColor backgroundColor = mSettings.getBackgroundColor();
+
+        if (BackgroundColor.GREY == backgroundColor)
             mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mDarkGreyBackgroundColor));
-        else if (BackgroundColor.BLACK == mBackgroundColor)
+        else if (BackgroundColor.BLACK == backgroundColor)
             mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mBlackBackgroundColor));
         //System.out.println(mPoisonShowing + " " + mStartingLife + " " + mWhiteBackground);
-        ((SettingsListAdapter)mSettingsDrawerList.getAdapter())
-                .setSettings(mPoisonShowing, mEnergyShowing, mStartingLife, mBackgroundColor, mRoundTime, mTimerShowing, mHapticFeedbackEnabled);
+        ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).setSettings(mSettings);
 
     }
 
@@ -180,22 +171,16 @@ public class MainActivity extends SensorActivity {
         String poisonTwo = settings.getString(Constants.PICKER_TWO_POISON, Constants.STARTING_POISON);
         String energyOne = settings.getString(Constants.PICKER_ONE_ENERGY, Constants.STARTING_ENERGY);
         String energyTwo = settings.getString(Constants.PICKER_TWO_ENERGY, Constants.STARTING_ENERGY);
-        mBackgroundColor = BackgroundColor.values()[settings.getInt(Constants.BACKGROUND_WHITE, 0)];
+
+        mSettings = Settings.Companion.fromPreferences(settings);
         mLifePickerOne.setText(lifeOne);
         mLifePickerTwo.setText(lifeTwo);
         mPoisonPickerOne.setText(poisonOne);
         mPoisonPickerTwo.setText(poisonTwo);
         mEnergyPickerOne.setText(energyOne);
         mEnergyPickerTwo.setText(energyTwo);
-        mPoisonShowing = settings.getBoolean(Constants.POISON, false);
-        mEnergyShowing = settings.getBoolean(Constants.ENERGY, false);
-        mHapticFeedbackEnabled = settings.getBoolean(Constants.ENABLE_HAPTIC, false);
-        mStartingLife = settings.getInt(Constants.STARTING_LIFE,
-                Integer.parseInt(Constants.STARTING_LIFE));
-        mRoundTime = settings.getInt(Constants.ROUND_TIME, 50);
         mSavedRoundTime =
                 settings.getLong(Constants.REMAINING_ROUND_TIME, Constants.BASE_ROUND_TIME_IN_MS);
-        mTimerShowing = settings.getBoolean(Constants.ROUND_TIMER_SHOWING, false);
         resetTimer(true);
         String historyAsString = settings.getString(Constants.HISTORY, null);
         List<String> tempList;
@@ -221,15 +206,11 @@ public class MainActivity extends SensorActivity {
         editor.putString(Constants.PICKER_TWO_POISON, mPoisonPickerTwo.getText().toString());
         editor.putString(Constants.PICKER_ONE_ENERGY, mEnergyPickerOne.getText().toString());
         editor.putString(Constants.PICKER_TWO_ENERGY, mEnergyPickerTwo.getText().toString());
-        editor.putInt(Constants.BACKGROUND_WHITE, mBackgroundColor.ordinal());
-        editor.putBoolean(Constants.POISON, mPoisonShowing);
-        editor.putBoolean(Constants.ENERGY, mEnergyShowing);
-        editor.putBoolean(Constants.ENABLE_HAPTIC, mHapticFeedbackEnabled);
-        editor.putInt(Constants.STARTING_LIFE, mStartingLife);
         editor.putString(Constants.HISTORY, mHistory.toString());
-        editor.putInt(Constants.ROUND_TIME, mRoundTime);
         editor.putLong(Constants.REMAINING_ROUND_TIME, mSavedRoundTime);
-        editor.putBoolean(Constants.ROUND_TIMER_SHOWING, mTimerShowing);
+
+        mSettings.saveTo(editor);
+
         editor.commit();
     }
 
@@ -243,7 +224,8 @@ public class MainActivity extends SensorActivity {
         savedInstanceState.putString(Constants.PICKER_ONE_ENERGY, mEnergyPickerOne.getText().toString());
         savedInstanceState.putString(Constants.PICKER_TWO_ENERGY, mEnergyPickerTwo.getText().toString());
 
-        savedInstanceState.putSerializable(Constants.BACKGROUND_WHITE, mBackgroundColor);
+        mSettings.saveTo(savedInstanceState);
+
         int startingLife;
         if (findViewById(R.id.starting_life_picker) == null)
             startingLife = Integer.parseInt(Constants.STARTING_LIFE);
@@ -255,15 +237,10 @@ public class MainActivity extends SensorActivity {
             startingLife = Integer.parseInt(values[index]);
         }
         savedInstanceState.putInt(Constants.STARTING_LIFE, startingLife);
-        savedInstanceState.putBoolean(Constants.POISON, mPoisonShowing);
-        savedInstanceState.putBoolean(Constants.ENERGY, mEnergyShowing);
-        savedInstanceState.putBoolean(Constants.ENABLE_HAPTIC, mHapticFeedbackEnabled);
 
         savedInstanceState.putStringArrayList(Constants.HISTORY, mHistory);
 
-        savedInstanceState.putInt(Constants.ROUND_TIME, mRoundTime);
         savedInstanceState.putLong(Constants.REMAINING_ROUND_TIME, mSavedRoundTime);
-        savedInstanceState.putBoolean(Constants.ROUND_TIMER_SHOWING, mTimerShowing);
 
         //System.out.println(savedInstanceState);
 
@@ -395,7 +372,7 @@ public class MainActivity extends SensorActivity {
     }
 
     public void setmStartingLife(int startingLife) {
-        mStartingLife = startingLife;
+        mSettings.setStartingLife(startingLife);
     }
 
     private void initElements() {
@@ -427,13 +404,11 @@ public class MainActivity extends SensorActivity {
 
         instantiateArrayLists();
 
-        mStartingLife = 20;
+        mSettings = Settings.Companion.getDefault();
+
         mPoisonOptionIndex = 2;
 
-        mRoundTime = 50;
-
         mCurrentRotation = 0.0f;
-        mBackgroundColor = BackgroundColor.WHITE;
 
         mSettingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -572,7 +547,7 @@ public class MainActivity extends SensorActivity {
         mRoundTimer.cancel();
         mRoundTimer = getNewTimer(Constants.BASE_ROUND_TIME_IN_MS);
         if (!restart)
-            mSavedRoundTime = minutesToMilliseconds(mRoundTime);
+            mSavedRoundTime = minutesToMilliseconds(mSettings.getRoundTimeInMinutes());
         mTimerRunning = false;
         mRoundTimerTextView.setText(getMinutes(mSavedRoundTime));
     }
@@ -609,15 +584,15 @@ public class MainActivity extends SensorActivity {
     }
 
     private void displayPoison() {
-        if (mPoisonShowing) {
+        if (mSettings.getPoisonShowing()) {
             mPoisonLinearLayoutOne.setVisibility(View.GONE);
             mPoisonLinearLayoutTwo.setVisibility(View.GONE);
-            mPoisonShowing = false;
+            mSettings.setPoisonShowing(false);
             mPoisonOption = mShowPoison;
         } else {
             mPoisonLinearLayoutOne.setVisibility(View.VISIBLE);
             mPoisonLinearLayoutTwo.setVisibility(View.VISIBLE);
-            mPoisonShowing = true;
+            mSettings.setPoisonShowing(true);
             mPoisonOption = mHidePoison;
         }
         mOptions.set(mPoisonOptionIndex, mPoisonOption);
@@ -626,14 +601,14 @@ public class MainActivity extends SensorActivity {
     }
 
     private void displayEnergy() {
-        if (mEnergyShowing) {
+        if (mSettings.getEnergyShowing()) {
             mEnergyLinerLayoutOne.setVisibility(View.GONE);
             mEnergyLinerLayoutTwo.setVisibility(View.GONE);
-            mEnergyShowing = false;
+            mSettings.setEnergyShowing(false);
         } else {
             mEnergyLinerLayoutOne.setVisibility(View.VISIBLE);
             mEnergyLinerLayoutTwo.setVisibility(View.VISIBLE);
-            mEnergyShowing = true;
+            mSettings.setEnergyShowing(true);
         }
 
         ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
@@ -644,11 +619,11 @@ public class MainActivity extends SensorActivity {
     protected void checkShake(float x, float y, float z) {
         float acceleration = (float) Math.sqrt((double) x*x + y*y + z*z);
         if (Math.abs(acceleration - mGravity) > Constants.THROW_ACCELERATION)
-            startDiceThrowActivity(mBackgroundColor);
+            startDiceThrowActivity(mSettings.getBackgroundColor());
     }
 
     public void setTime(int i) {
-        mRoundTime = i;
+        mSettings.setRoundTimeInMinutes(i);
     }
 
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
@@ -669,7 +644,7 @@ public class MainActivity extends SensorActivity {
                     break;
                 case 5:
                     mSettingsDrawerLayout.closeDrawer(mSettingsDrawer);
-                    startDiceThrowActivity(mBackgroundColor);
+                    startDiceThrowActivity(mSettings.getBackgroundColor());
                     break;
                 case 6:
                     break;
@@ -693,40 +668,41 @@ public class MainActivity extends SensorActivity {
                         mSettingsDrawerList.getAdapter()).getBackground();
         if (BackgroundColor.GREY == targetBackground) {
             mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mDarkGreyBackgroundColor));
-            mBackgroundColor = BackgroundColor.GREY;
+            mSettings.setBackgroundColor(BackgroundColor.GREY);
         } else if (BackgroundColor.BLACK == targetBackground) {
             mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mBlackBackgroundColor));
-            mBackgroundColor = BackgroundColor.BLACK;
+            mSettings.setBackgroundColor(BackgroundColor.BLACK);
         } else {
             mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mWhiteBackgroundColor));
-            mBackgroundColor = BackgroundColor.WHITE;
+            mSettings.setBackgroundColor(BackgroundColor.WHITE);
         }
     }
 
     public void togglePoison() {
-        String showPoison =
-                ((TextView) findViewById(R.id.poison_toggle)).getText().toString();
-        if (showPoison.equals("on") && !mPoisonShowing ||
-                showPoison.equals("off") && mPoisonShowing) {
+        String showPoison = ((TextView) findViewById(R.id.poison_toggle)).getText().toString();
+        boolean poisonShowing = mSettings.getPoisonShowing();
+        if (showPoison.equals("on") && !poisonShowing ||
+                showPoison.equals("off") && poisonShowing) {
             displayPoison();
         }
     }
 
     public void toggleEnergy() {
-        String showEnergy =
-                ((TextView) findViewById(R.id.energy_toggle)).getText().toString();
-        if (showEnergy.equals("on") && !mEnergyShowing ||
-                showEnergy.equals("off") && mEnergyShowing) {
+        String showEnergy = ((TextView) findViewById(R.id.energy_toggle)).getText().toString();
+        boolean energyShowing = mSettings.getEnergyShowing();
+        if (showEnergy.equals("on") && !energyShowing ||
+                showEnergy.equals("off") && energyShowing) {
             displayEnergy();
         }
     }
 
     public void toggleHaptic(boolean hapticEnabled) {
-        mHapticFeedbackEnabled = hapticEnabled;
+        mSettings.setHapticFeedbackEnabled(hapticEnabled);
     }
 
     public void toggleTimer() {
-        if (mTimerShowing) {
+        boolean timerShowing = mSettings.getTimerShowing();
+        if (timerShowing) {
             setTimerAnimations(false);
             mRoundTimerTextView.setVisibility(View.GONE);
             mRoundTimer.cancel();
@@ -737,7 +713,7 @@ public class MainActivity extends SensorActivity {
                 mRoundTimer = getNewTimer(mSavedRoundTime);
             mRoundTimerTextView.setText(getMinutes(mSavedRoundTime));
         }
-        mTimerShowing = !mTimerShowing;
+        mSettings.setTimerShowing(!timerShowing);
     }
 
     private void setTextViewOnTouchListener(final TextView picker, final boolean poison) {
@@ -896,7 +872,7 @@ public class MainActivity extends SensorActivity {
     }
 
     private void changePickerValue(TextView picker, boolean add) {
-        if (mHapticFeedbackEnabled) {
+        if (mSettings.getHapticFeedbackEnabled()) {
             picker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         }
         int lifeTotal = getPickerValue(picker);
