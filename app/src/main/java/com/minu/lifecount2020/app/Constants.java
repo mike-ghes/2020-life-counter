@@ -32,5 +32,6 @@ public final class Constants {
     public static final String ROUND_TIME = "ROUND_TIME";
     public static final String REMAINING_ROUND_TIME = "REMAINING_ROUND_TIME";
     public static final String ROUND_TIMER_SHOWING = "ROUND_TIMER_SHOWING";
+    public static final String ENABLE_HAPTIC = "HAPTIC";
 
 }

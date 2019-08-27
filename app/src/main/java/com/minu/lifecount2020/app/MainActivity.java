@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
@@ -60,6 +61,7 @@ public class MainActivity extends SensorActivity {
 
     private boolean mPoisonShowing;
     private boolean mEnergyShowing;
+    private boolean mHapticFeedbackEnabled;
 
     private ArrayList<String> mOptions;
 
@@ -102,6 +104,7 @@ public class MainActivity extends SensorActivity {
     private long mSavedRoundTime;
     private int mRoundTime;
     private String mEnergyOption;
+    private String mHapticOption;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,6 +136,7 @@ public class MainActivity extends SensorActivity {
             ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).notifyDataSetChanged();
             mPoisonShowing = savedInstanceState.getBoolean(Constants.POISON);
             mEnergyShowing = savedInstanceState.getBoolean(Constants.ENERGY);
+            mHapticFeedbackEnabled = savedInstanceState.getBoolean(Constants.ENABLE_HAPTIC);
             mBackgroundColor =
                     (BackgroundColor) savedInstanceState.getSerializable(Constants.BACKGROUND_WHITE);
             mStartingLife = savedInstanceState.getInt(Constants.STARTING_LIFE);
@@ -164,7 +168,7 @@ public class MainActivity extends SensorActivity {
             mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mBlackBackgroundColor));
         //System.out.println(mPoisonShowing + " " + mStartingLife + " " + mWhiteBackground);
         ((SettingsListAdapter)mSettingsDrawerList.getAdapter())
-                .setSettings(mPoisonShowing, mEnergyShowing, mStartingLife, mBackgroundColor, mRoundTime, mTimerShowing);
+                .setSettings(mPoisonShowing, mEnergyShowing, mStartingLife, mBackgroundColor, mRoundTime, mTimerShowing, mHapticFeedbackEnabled);
 
     }
 
@@ -185,6 +189,7 @@ public class MainActivity extends SensorActivity {
         mEnergyPickerTwo.setText(energyTwo);
         mPoisonShowing = settings.getBoolean(Constants.POISON, false);
         mEnergyShowing = settings.getBoolean(Constants.ENERGY, false);
+        mHapticFeedbackEnabled = settings.getBoolean(Constants.ENABLE_HAPTIC, false);
         mStartingLife = settings.getInt(Constants.STARTING_LIFE,
                 Integer.parseInt(Constants.STARTING_LIFE));
         mRoundTime = settings.getInt(Constants.ROUND_TIME, 50);
@@ -219,6 +224,7 @@ public class MainActivity extends SensorActivity {
         editor.putInt(Constants.BACKGROUND_WHITE, mBackgroundColor.ordinal());
         editor.putBoolean(Constants.POISON, mPoisonShowing);
         editor.putBoolean(Constants.ENERGY, mEnergyShowing);
+        editor.putBoolean(Constants.ENABLE_HAPTIC, mHapticFeedbackEnabled);
         editor.putInt(Constants.STARTING_LIFE, mStartingLife);
         editor.putString(Constants.HISTORY, mHistory.toString());
         editor.putInt(Constants.ROUND_TIME, mRoundTime);
@@ -251,6 +257,7 @@ public class MainActivity extends SensorActivity {
         savedInstanceState.putInt(Constants.STARTING_LIFE, startingLife);
         savedInstanceState.putBoolean(Constants.POISON, mPoisonShowing);
         savedInstanceState.putBoolean(Constants.ENERGY, mEnergyShowing);
+        savedInstanceState.putBoolean(Constants.ENABLE_HAPTIC, mHapticFeedbackEnabled);
 
         savedInstanceState.putStringArrayList(Constants.HISTORY, mHistory);
 
@@ -311,6 +318,7 @@ public class MainActivity extends SensorActivity {
         mOptions.add(getString(R.string.color_scheme));
         mOptions.add(getString(R.string.throw_dice));
         mOptions.add(getString(R.string.round_timer));
+        mOptions.add(getString(R.string.haptic_feedback));
     }
 
     private void setInitialColors() {
@@ -479,6 +487,7 @@ public class MainActivity extends SensorActivity {
         mShowPoison = getString(R.string.poison);
         mHidePoison = getString(R.string.poison);
         mEnergyOption = getString(R.string.energy);
+        mHapticOption = getString(R.string.haptic_feedback);
 
         mPullToRefresh = getString(R.string.pull_to_restart);
         mReleaseToRefresh = getString(R.string.pull_to_cancel);
@@ -712,6 +721,10 @@ public class MainActivity extends SensorActivity {
         }
     }
 
+    public void toggleHaptic(boolean hapticEnabled) {
+        mHapticFeedbackEnabled = hapticEnabled;
+    }
+
     public void toggleTimer() {
         if (mTimerShowing) {
             setTimerAnimations(false);
@@ -883,6 +896,9 @@ public class MainActivity extends SensorActivity {
     }
 
     private void changePickerValue(TextView picker, boolean add) {
+        if (mHapticFeedbackEnabled) {
+            picker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        }
         int lifeTotal = getPickerValue(picker);
         if (add)
             lifeTotal++;

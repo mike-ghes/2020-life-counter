@@ -28,6 +28,7 @@ public class SettingsListAdapter extends BaseAdapter {
 
     private boolean mPoisonShowing;
     private boolean mEnergyShowing;
+    private boolean mHapticEnabled;
     private BackgroundColor mBackgroundColor;
     private int mStartingLife;
     private String[] mStartingLifeValues;
@@ -94,6 +95,10 @@ public class SettingsListAdapter extends BaseAdapter {
                         new ContextThemeWrapper(mContext, R.style.NumberPickerTextColorStyle))
                         .inflate(R.layout.timer_option, parent, false);
                 setupTimerOption(vi);
+                break;
+            case 7:
+                vi = mLayoutInflater.inflate(R.layout.poison_option, parent, false);
+                setupHapticOption(vi);
                 break;
             default:
                 vi = mLayoutInflater.inflate(R.layout.settings_list_item, parent, false);
@@ -227,6 +232,12 @@ public class SettingsListAdapter extends BaseAdapter {
         setToggle(energyToggle, new toggleEnergyCommand());
     }
 
+    private void setupHapticOption(View vi) {
+        TextView hapticToggle = (TextView) vi.findViewById(R.id.poison_toggle);
+        setUpToggle(hapticToggle, mHapticEnabled);
+        setToggle(hapticToggle, new toggleHapticCommand());
+    }
+
     private void setUpToggle(TextView toggle, boolean on) {
         if (on) {
             toggle.setText(mContext.getString(R.string.on));
@@ -284,6 +295,14 @@ public class SettingsListAdapter extends BaseAdapter {
         public void execute() {
             mTimerShowing = !mTimerShowing;
             ((MainActivity) mContext).toggleTimer();
+        }
+    }
+
+    private class toggleHapticCommand implements Command {
+        @Override
+        public void execute() {
+            mHapticEnabled = !mHapticEnabled;
+            ((MainActivity) mContext).toggleHaptic(mHapticEnabled);
         }
     }
 
@@ -349,7 +368,8 @@ public class SettingsListAdapter extends BaseAdapter {
     }
 
     public void setSettings(boolean poisonShowing, boolean energyShowing, int startingLife,
-                                BackgroundColor background, int time, boolean timerShowing) {
+                                BackgroundColor background, int time, boolean timerShowing,
+                                boolean hapticFeedbackEnabled) {
         //System.out.println("Settings settings " + poisonShowing);
         mPoisonShowing = poisonShowing;
         mEnergyShowing = energyShowing;
@@ -357,5 +377,6 @@ public class SettingsListAdapter extends BaseAdapter {
         mBackgroundColor = background;
         mTimerShowing = timerShowing;
         mTime = time;
+        mHapticEnabled = hapticFeedbackEnabled;
     }
 }

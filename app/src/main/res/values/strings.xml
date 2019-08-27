@@ -26,5 +26,6 @@
     <string name="throw_dice">Throw dice</string>
     <string name="round_timer">Round timer</string>
     <string name="energy">Energy</string>
+    <string name="haptic_feedback">Touch Feedback</string>
 
 </resources>
