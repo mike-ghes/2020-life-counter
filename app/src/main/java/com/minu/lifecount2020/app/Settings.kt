@@ -17,6 +17,13 @@ data class Settings(
 
     fun saveTo(bundle: Bundle) = bundle.putSettings(this)
 
+    fun buildNewGame() = GameState(
+            ArrayList(),
+            Constants.BASE_ROUND_TIME_IN_MS, // TODO: Use roundTimeInMinutes instead
+            PlayerState(startingLife.toString(), Constants.STARTING_ENERGY, Constants.STARTING_POISON),
+            PlayerState(startingLife.toString(), Constants.STARTING_ENERGY, Constants.STARTING_POISON)
+    )
+
     companion object {
         fun fromBundle(bundle: Bundle) = bundle.getSettings()
 
@@ -53,7 +60,6 @@ fun Bundle.putSettings(settings: Settings) {
     putInt(Constants.ROUND_TIME, settings.roundTimeInMinutes)
     putBoolean(Constants.ROUND_TIMER_SHOWING, settings.timerShowing)
 }
-
 
 fun Bundle.getSettings(): Settings {
     val mPoisonShowing = getBoolean(Constants.POISON)

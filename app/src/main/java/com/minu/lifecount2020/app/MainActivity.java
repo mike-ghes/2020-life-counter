@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.os.CountDownTimer;
+import android.support.annotation.NonNull;
 import android.support.v4.widget.DrawerLayout;
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
@@ -25,12 +26,11 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.NumberPicker;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class MainActivity extends SensorActivity {
 
@@ -61,6 +61,8 @@ public class MainActivity extends SensorActivity {
 
     private Settings mSettings;
 
+    private GameState mGameState;
+
     private ArrayList<String> mOptions;
 
     private DrawerLayout mSettingsDrawerLayout;
@@ -80,7 +82,6 @@ public class MainActivity extends SensorActivity {
     private float mPickerLastX;
     private boolean mUpdating;
 
-    private ArrayList<String> mHistory;
 
     private String mShowPoison;
     private String mHidePoison;
@@ -96,7 +97,6 @@ public class MainActivity extends SensorActivity {
     private CountDownTimer mRoundTimer;
     private TextView mRoundTimerTextView;
     private boolean mTimerRunning;
-    private long mSavedRoundTime;
     private String mEnergyOption;
     private String mHapticOption;
 
@@ -119,38 +119,37 @@ public class MainActivity extends SensorActivity {
 
         if (savedInstanceState != null) {
             //System.out.println("Restoring state");
-            setLifeTotals(savedInstanceState.getString(Constants.PICKER_ONE_LIFE),
-                    savedInstanceState.getString(Constants.PICKER_ONE_POISON),
-                    savedInstanceState.getString(Constants.PICKER_TWO_LIFE),
-                    savedInstanceState.getString(Constants.PICKER_TWO_POISON),
-                    savedInstanceState.getString(Constants.PICKER_ONE_ENERGY),
-                    savedInstanceState.getString(Constants.PICKER_TWO_ENERGY));
-
-            mHistory = savedInstanceState.getStringArrayList(Constants.HISTORY);
-            ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).notifyDataSetChanged();
 
             mSettings = Settings.Companion.fromBundle(savedInstanceState);
 
+            mGameState = GameState.Companion.fromBundle(savedInstanceState);
+
+            setLifeTotals();
+
+
         } else {
-            restoreFromPreferences();
+            SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
+
+            mGameState = GameState.Companion.fromPreferences(settings);
+
+            mSettings = Settings.Companion.fromPreferences(settings);
+
+            setLifeTotals();
+
+            resetTimer(true);
+
+            restoreSettings();
         }
     }
 
     private void restoreSettings() {
         mPoisonOption = mShowPoison;
-        if (mSettings.getPoisonShowing()) {
-            mSettings.setPoisonShowing(false);
-            displayPoison();
-        }
-        if (mSettings.getEnergyShowing()) {
-            mSettings.setEnergyShowing(false);
-            displayEnergy();
-        }
 
-        if (mSettings.getTimerShowing()) {
-            mSettings.setTimerShowing(false);
-            toggleTimer();
-        }
+        displayPoison();
+
+        displayEnergy();
+
+        toggleTimer();
 
         BackgroundColor backgroundColor = mSettings.getBackgroundColor();
 
@@ -163,84 +162,27 @@ public class MainActivity extends SensorActivity {
 
     }
 
-    private void restoreFromPreferences() {
-        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
-        String lifeOne = settings.getString(Constants.PICKER_ONE_LIFE, Constants.STARTING_LIFE);
-        String lifeTwo = settings.getString(Constants.PICKER_TWO_LIFE, Constants.STARTING_LIFE);
-        String poisonOne = settings.getString(Constants.PICKER_ONE_POISON, Constants.STARTING_POISON);
-        String poisonTwo = settings.getString(Constants.PICKER_TWO_POISON, Constants.STARTING_POISON);
-        String energyOne = settings.getString(Constants.PICKER_ONE_ENERGY, Constants.STARTING_ENERGY);
-        String energyTwo = settings.getString(Constants.PICKER_TWO_ENERGY, Constants.STARTING_ENERGY);
-
-        mSettings = Settings.Companion.fromPreferences(settings);
-        mLifePickerOne.setText(lifeOne);
-        mLifePickerTwo.setText(lifeTwo);
-        mPoisonPickerOne.setText(poisonOne);
-        mPoisonPickerTwo.setText(poisonTwo);
-        mEnergyPickerOne.setText(energyOne);
-        mEnergyPickerTwo.setText(energyTwo);
-        mSavedRoundTime =
-                settings.getLong(Constants.REMAINING_ROUND_TIME, Constants.BASE_ROUND_TIME_IN_MS);
-        resetTimer(true);
-        String historyAsString = settings.getString(Constants.HISTORY, null);
-        List<String> tempList;
-        if (historyAsString != null)
-            tempList = Arrays.asList(
-                historyAsString.substring(1, historyAsString.length() - 1).split((", ")));
-        else
-            tempList = new ArrayList<String>();
-        mHistory = new ArrayList<String>(tempList);
-        restoreSettings();
-    }
-
-
     @Override
     protected void onStop(){
         super.onStop();
 
         SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = settings.edit();
-        editor.putString(Constants.PICKER_ONE_LIFE, mLifePickerOne.getText().toString());
-        editor.putString(Constants.PICKER_TWO_LIFE, mLifePickerTwo.getText().toString());
-        editor.putString(Constants.PICKER_ONE_POISON, mPoisonPickerOne.getText().toString());
-        editor.putString(Constants.PICKER_TWO_POISON, mPoisonPickerTwo.getText().toString());
-        editor.putString(Constants.PICKER_ONE_ENERGY, mEnergyPickerOne.getText().toString());
-        editor.putString(Constants.PICKER_TWO_ENERGY, mEnergyPickerTwo.getText().toString());
-        editor.putString(Constants.HISTORY, mHistory.toString());
-        editor.putLong(Constants.REMAINING_ROUND_TIME, mSavedRoundTime);
+
+        mGameState.saveTo(editor);
 
         mSettings.saveTo(editor);
 
-        editor.commit();
+        editor.apply();
     }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         //System.out.println("Saving state");
-        savedInstanceState.putString(Constants.PICKER_ONE_LIFE, mLifePickerOne.getText().toString());
-        savedInstanceState.putString(Constants.PICKER_ONE_POISON, mPoisonPickerOne.getText().toString());
-        savedInstanceState.putString(Constants.PICKER_TWO_LIFE, mLifePickerTwo.getText().toString());
-        savedInstanceState.putString(Constants.PICKER_TWO_POISON, mPoisonPickerTwo.getText().toString());
-        savedInstanceState.putString(Constants.PICKER_ONE_ENERGY, mEnergyPickerOne.getText().toString());
-        savedInstanceState.putString(Constants.PICKER_TWO_ENERGY, mEnergyPickerTwo.getText().toString());
+
+        mGameState.saveTo(savedInstanceState);
 
         mSettings.saveTo(savedInstanceState);
-
-        int startingLife;
-        if (findViewById(R.id.starting_life_picker) == null)
-            startingLife = Integer.parseInt(Constants.STARTING_LIFE);
-        else {
-            int index = ((NumberPicker) findViewById(R.id.starting_life_picker)).getValue();
-            String[] values = ((NumberPicker) findViewById(R.id.starting_life_picker))
-                    .getDisplayedValues();
-            //System.out.println(values);
-            startingLife = Integer.parseInt(values[index]);
-        }
-        savedInstanceState.putInt(Constants.STARTING_LIFE, startingLife);
-
-        savedInstanceState.putStringArrayList(Constants.HISTORY, mHistory);
-
-        savedInstanceState.putLong(Constants.REMAINING_ROUND_TIME, mSavedRoundTime);
 
         //System.out.println(savedInstanceState);
 
@@ -248,43 +190,42 @@ public class MainActivity extends SensorActivity {
     }
 
     private void bindElements() {
-        mLifeLinearLayoutOne = (LinearLayout) findViewById(R.id.first_life_picker_layout);
-        mLifeLinearLayoutTwo = (LinearLayout) findViewById(R.id.second_life_picker_layout);
+        mLifeLinearLayoutOne = findViewById(R.id.first_life_picker_layout);
+        mLifeLinearLayoutTwo = findViewById(R.id.second_life_picker_layout);
 
-        mPoisonLinearLayoutOne = (LinearLayout) findViewById(R.id.first_poison_picker_layout);
-        mPoisonLinearLayoutTwo = (LinearLayout) findViewById(R.id.second_poison_picker_layout);
+        mPoisonLinearLayoutOne = findViewById(R.id.first_poison_picker_layout);
+        mPoisonLinearLayoutTwo = findViewById(R.id.second_poison_picker_layout);
 
-        mEnergyLinerLayoutOne = (LinearLayout) findViewById(R.id.first_energy_picker_layout);
-        mEnergyLinerLayoutTwo = (LinearLayout) findViewById(R.id.second_energy_picker_layout);
+        mEnergyLinerLayoutOne = findViewById(R.id.first_energy_picker_layout);
+        mEnergyLinerLayoutTwo = findViewById(R.id.second_energy_picker_layout);
 
-        mLifePickerOne = (TextView) findViewById(R.id.life_picker_1);
-        mLifePickerTwo = (TextView) findViewById(R.id.life_picker_2);
+        mLifePickerOne = findViewById(R.id.life_picker_1);
+        mLifePickerTwo = findViewById(R.id.life_picker_2);
 
-        mPoisonPickerOne = (TextView) findViewById(R.id.poison_picker_1);
-        mPoisonPickerTwo = (TextView) findViewById(R.id.poison_picker_2);
+        mPoisonPickerOne = findViewById(R.id.poison_picker_1);
+        mPoisonPickerTwo = findViewById(R.id.poison_picker_2);
 
-        mEnergyPickerOne = (TextView) findViewById(R.id.energy_picker_1);
-        mEnergyPickerTwo = (TextView) findViewById(R.id.energy_picker_2);
+        mEnergyPickerOne = findViewById(R.id.energy_picker_1);
+        mEnergyPickerTwo = findViewById(R.id.energy_picker_2);
 
         setInitialColors();
 
-        mWrapper = (LinearLayout) findViewById(R.id.wrapper);
+        mWrapper = findViewById(R.id.wrapper);
 
-        mLeftUpdateTextView = (TextView) findViewById(R.id.update);
-        mRighyUpdateTextView = (TextView) findViewById(R.id.update_2);
+        mLeftUpdateTextView = findViewById(R.id.update);
+        mRighyUpdateTextView = findViewById(R.id.update_2);
 
-        mSettingsButton = (ImageButton) findViewById(R.id.settings_button);
-        mHistoryButton = (ImageButton) findViewById(R.id.history_button);
+        mSettingsButton = findViewById(R.id.settings_button);
+        mHistoryButton = findViewById(R.id.history_button);
 
-        mOptions = new ArrayList<String>();
-        mHistory = new ArrayList<String>();
+        mOptions = new ArrayList<>();
 
-        mSettingsDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mSettingsDrawerLayout = findViewById(R.id.drawer_layout);
 
-        mSettingsDrawer = (RelativeLayout) findViewById(R.id.settings_drawer);
+        mSettingsDrawer = findViewById(R.id.settings_drawer);
 
-        mSettingsDrawerList = (ListView) findViewById(R.id.left_drawer);
-        mHistoryDrawerList = (ListView) findViewById(R.id.right_drawer);
+        mSettingsDrawerList = findViewById(R.id.left_drawer);
+        mHistoryDrawerList = findViewById(R.id.right_drawer);
     }
 
     private void instantiateArrayLists() {
@@ -334,20 +275,23 @@ public class MainActivity extends SensorActivity {
     private void collapseHistory() {
         long currentTime;
         long nextTime;
-        for (int i = 0; i + 1 < mHistory.size(); i++) {
-            if (!isHistoryEntryRead(mHistory.get(i))) {
-                currentTime = parseTimeStamp(mHistory.get(i));
-                nextTime = parseTimeStamp(mHistory.get(i + 1));
+        ArrayList<String> history = mGameState.getHistory();
+        for (int i = 0; i + 1 < history.size(); i++) {
+            if (!isHistoryEntryRead(history.get(i))) {
+                currentTime = parseTimeStamp(history.get(i));
+                nextTime = parseTimeStamp(history.get(i + 1));
                 if (nextTime - currentTime < 2000) {
-                    mHistory.remove(i);
+                    history.remove(i);
                     i--;
                 }
             }
         }
-        for (int i = 0; i < mHistory.size(); i++)
-            mHistory.set(i, markedHistoryEntryRead(mHistory.get(i)));
+        for (int i = 0; i < history.size(); i++) {
+            history.set(i, markedHistoryEntryRead(history.get(i)));
+        }
+        mGameState.setHistory(history);
         ((HistoryListAdapter)mHistoryDrawerList.getAdapter()).clear();
-        ((HistoryListAdapter)mHistoryDrawerList.getAdapter()).addAll(mHistory);
+        ((HistoryListAdapter)mHistoryDrawerList.getAdapter()).addAll(history);
     }
 
     private void showHistory() {
@@ -376,25 +320,28 @@ public class MainActivity extends SensorActivity {
     }
 
     private void initElements() {
+        mSettings = Settings.Companion.getDefault();
+
+        mGameState = mSettings.buildNewGame();
 
         mSettingsDrawerList.setAdapter(new SettingsListAdapter(this, mOptions));
 
-        mHistoryDrawerList.setAdapter(new HistoryListAdapter(this, mHistory));
+        mHistoryDrawerList.setAdapter(new HistoryListAdapter(this, mGameState.getHistory()));
 
         mSettingsDrawerList.setOnItemClickListener(new DrawerItemClickListener());
 
-        setLayoutTouchListener(mLifeLinearLayoutOne, mLifePickerOne);
-        setLayoutTouchListener(mLifeLinearLayoutTwo, mLifePickerTwo);
-        setLayoutTouchListener(mPoisonLinearLayoutOne, mPoisonPickerOne);
-        setLayoutTouchListener(mPoisonLinearLayoutTwo, mPoisonPickerTwo);
-        setLayoutTouchListener(mEnergyLinerLayoutOne, mEnergyPickerOne);
-        setLayoutTouchListener(mEnergyLinerLayoutTwo, mEnergyPickerTwo);
-        setTextViewOnTouchListener(mLifePickerOne, false);
-        setTextViewOnTouchListener(mLifePickerTwo, false);
-        setTextViewOnTouchListener(mPoisonPickerOne, true);
-        setTextViewOnTouchListener(mPoisonPickerTwo, true);
-        setTextViewOnTouchListener(mEnergyPickerOne, false);
-        setTextViewOnTouchListener(mEnergyPickerTwo, false);
+        setLayoutTouchListener(mLifeLinearLayoutOne, mLifePickerOne, Player.ONE, PlayerField.Life);
+        setLayoutTouchListener(mLifeLinearLayoutTwo, mLifePickerTwo, Player.TWO, PlayerField.Life);
+        setLayoutTouchListener(mPoisonLinearLayoutOne, mPoisonPickerOne, Player.ONE, PlayerField.Poison);
+        setLayoutTouchListener(mPoisonLinearLayoutTwo, mPoisonPickerTwo, Player.TWO, PlayerField.Poison);
+        setLayoutTouchListener(mEnergyLinerLayoutOne, mEnergyPickerOne, Player.ONE, PlayerField.Energy);
+        setLayoutTouchListener(mEnergyLinerLayoutTwo, mEnergyPickerTwo, Player.TWO, PlayerField.Energy);
+        setTextViewOnTouchListener(mLifePickerOne, Player.ONE, PlayerField.Life);
+        setTextViewOnTouchListener(mLifePickerTwo, Player.TWO, PlayerField.Life);
+        setTextViewOnTouchListener(mPoisonPickerOne, Player.ONE, PlayerField.Poison);
+        setTextViewOnTouchListener(mPoisonPickerTwo, Player.TWO, PlayerField.Poison);
+        setTextViewOnTouchListener(mEnergyPickerOne, Player.ONE, PlayerField.Energy);
+        setTextViewOnTouchListener(mEnergyPickerTwo, Player.TWO, PlayerField.Energy);
 
         mPoisonLinearLayoutOne.setVisibility(View.GONE);
         mPoisonLinearLayoutTwo.setVisibility(View.GONE);
@@ -426,12 +373,12 @@ public class MainActivity extends SensorActivity {
 
         mSettingsDrawerLayout.setDrawerListener(new DrawerLayout.DrawerListener() {
             @Override
-            public void onDrawerSlide(View drawerView, float slideOffset) {
+            public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
 
             }
 
             @Override
-            public void onDrawerOpened(View drawerView) {
+            public void onDrawerOpened(@NonNull View drawerView) {
                 if (drawerView.equals(mHistoryDrawerList)) {
                     //System.out.println("Should show history");
                     //System.out.println(mHistory);
@@ -449,7 +396,7 @@ public class MainActivity extends SensorActivity {
             }
 
             @Override
-            public void onDrawerClosed(View drawerView) {
+            public void onDrawerClosed(@NonNull View drawerView) {
                 mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
             }
 
@@ -488,10 +435,10 @@ public class MainActivity extends SensorActivity {
     }
 
     private void instantiateRoundTimer() {
-        mSavedRoundTime = Constants.BASE_ROUND_TIME_IN_MS;
+        mGameState.setRemainingMillis(Constants.BASE_ROUND_TIME_IN_MS);
         mRoundTimer = getNewTimer(Constants.BASE_ROUND_TIME_IN_MS);
 
-        mRoundTimerTextView = (TextView) findViewById(R.id.round_timer);
+        mRoundTimerTextView = findViewById(R.id.round_timer);
 
         mRoundTimerTextView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -499,7 +446,7 @@ public class MainActivity extends SensorActivity {
                 if (mTimerRunning)
                     mRoundTimer.cancel();
                 else {
-                    mRoundTimer = getNewTimer(mSavedRoundTime);
+                    mRoundTimer = getNewTimer(mGameState.getRemainingMillis());
                     mRoundTimer.start();
                 }
                 mTimerRunning = !mTimerRunning;
@@ -547,9 +494,9 @@ public class MainActivity extends SensorActivity {
         mRoundTimer.cancel();
         mRoundTimer = getNewTimer(Constants.BASE_ROUND_TIME_IN_MS);
         if (!restart)
-            mSavedRoundTime = minutesToMilliseconds(mSettings.getRoundTimeInMinutes());
+            mGameState.setRemainingMillis(minutesToMilliseconds(mSettings.getRoundTimeInMinutes()));
         mTimerRunning = false;
-        mRoundTimerTextView.setText(getMinutes(mSavedRoundTime));
+        mRoundTimerTextView.setText(getMinutes(mGameState.getRemainingMillis()));
     }
 
     private long minutesToMilliseconds(int minutes) {
@@ -561,7 +508,7 @@ public class MainActivity extends SensorActivity {
             @Override
             public void onTick(long millisUntilFinished) {
                 mRoundTimerTextView.setText(getMinutes(millisUntilFinished));
-                mSavedRoundTime = millisUntilFinished;
+                mGameState.setRemainingMillis(millisUntilFinished);
             }
 
             @Override
@@ -577,22 +524,20 @@ public class MainActivity extends SensorActivity {
         long seconds = remainingSeconds % 60;
         String result;
         if (seconds < 10)
-            result = Long.toString(minutes) + ":0" + Long.toString(seconds);
+            result = minutes + ":0" + seconds;
         else
-            result = Long.toString(minutes) + ":" + Long.toString(seconds);
+            result = minutes + ":" + seconds;
         return result;
     }
 
     private void displayPoison() {
-        if (mSettings.getPoisonShowing()) {
+        if (!mSettings.getPoisonShowing()) {
             mPoisonLinearLayoutOne.setVisibility(View.GONE);
             mPoisonLinearLayoutTwo.setVisibility(View.GONE);
-            mSettings.setPoisonShowing(false);
             mPoisonOption = mShowPoison;
         } else {
             mPoisonLinearLayoutOne.setVisibility(View.VISIBLE);
             mPoisonLinearLayoutTwo.setVisibility(View.VISIBLE);
-            mSettings.setPoisonShowing(true);
             mPoisonOption = mHidePoison;
         }
         mOptions.set(mPoisonOptionIndex, mPoisonOption);
@@ -601,14 +546,12 @@ public class MainActivity extends SensorActivity {
     }
 
     private void displayEnergy() {
-        if (mSettings.getEnergyShowing()) {
+        if (!mSettings.getEnergyShowing()) {
             mEnergyLinerLayoutOne.setVisibility(View.GONE);
             mEnergyLinerLayoutTwo.setVisibility(View.GONE);
-            mSettings.setEnergyShowing(false);
         } else {
             mEnergyLinerLayoutOne.setVisibility(View.VISIBLE);
             mEnergyLinerLayoutTwo.setVisibility(View.VISIBLE);
-            mSettings.setEnergyShowing(true);
         }
 
         ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
@@ -678,22 +621,14 @@ public class MainActivity extends SensorActivity {
         }
     }
 
-    public void togglePoison() {
-        String showPoison = ((TextView) findViewById(R.id.poison_toggle)).getText().toString();
-        boolean poisonShowing = mSettings.getPoisonShowing();
-        if (showPoison.equals("on") && !poisonShowing ||
-                showPoison.equals("off") && poisonShowing) {
-            displayPoison();
-        }
+    public void togglePoison(boolean showPoison) {
+        mSettings.setPoisonShowing(showPoison);
+        displayPoison();
     }
 
-    public void toggleEnergy() {
-        String showEnergy = ((TextView) findViewById(R.id.energy_toggle)).getText().toString();
-        boolean energyShowing = mSettings.getEnergyShowing();
-        if (showEnergy.equals("on") && !energyShowing ||
-                showEnergy.equals("off") && energyShowing) {
-            displayEnergy();
-        }
+    public void toggleEnergy(boolean showEnergy) {
+        mSettings.setEnergyShowing(showEnergy);
+        displayEnergy();
     }
 
     public void toggleHaptic(boolean hapticEnabled) {
@@ -710,37 +645,36 @@ public class MainActivity extends SensorActivity {
             setTimerAnimations(true);
             mRoundTimerTextView.setVisibility(View.VISIBLE);
             if (mRoundTimer == null)
-                mRoundTimer = getNewTimer(mSavedRoundTime);
-            mRoundTimerTextView.setText(getMinutes(mSavedRoundTime));
+                mRoundTimer = getNewTimer(mGameState.getRemainingMillis());
+            mRoundTimerTextView.setText(getMinutes(mGameState.getRemainingMillis()));
         }
-        mSettings.setTimerShowing(!timerShowing);
     }
 
-    private void setTextViewOnTouchListener(final TextView picker, final boolean poison) {
+    private void setTextViewOnTouchListener(final TextView picker, final Player player, final PlayerField field) {
         picker.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 int action = motionEvent.getAction();
                 float y = motionEvent.getY();
                 float x = motionEvent.getX();
-                handlePickerTouchEvent(x, y, action, motionEvent, picker, poison);
+                handlePickerTouchEvent(x, y, action, motionEvent, picker, player, field);
                 return true;
             }
         });
     }
 
     private void handlePickerTouchEvent(float x, float y, int action,
-                                        MotionEvent motionEvent, TextView picker, boolean poison) {
+                                        MotionEvent motionEvent, TextView picker, final Player player, final PlayerField field) {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 recordTouchStart(motionEvent, picker);
                 break;
             case MotionEvent.ACTION_MOVE:
-                verticalSwipe(y, picker);
+                verticalSwipe(y, picker, player, field);
                 sideSwipe(x);
                 break;
             case MotionEvent.ACTION_UP:
-                handlePickerTouchRelease(picker, poison);
+                handlePickerTouchRelease(picker, player, field);
                 break;
             default:
                 //System.out.println("Default picker touchevent");
@@ -748,9 +682,9 @@ public class MainActivity extends SensorActivity {
         }
     }
 
-    private void handlePickerTouchRelease(TextView picker, boolean poison) {
+    private void handlePickerTouchRelease(TextView picker, final Player player, final PlayerField field) {
         if (!mSpun && !mSideSwipe) {
-            changePickerValue(picker, poison);
+            changePickerValue(picker, field == PlayerField.Poison, player, field);
             scaleTextView(picker, Constants.SCALE_DOWN);
         }
         //System.out.println("Action up");
@@ -773,31 +707,31 @@ public class MainActivity extends SensorActivity {
         }
     }
 
-    private void setLayoutTouchListener(final LinearLayout layout, final TextView picker) {
+    private void setLayoutTouchListener(final LinearLayout layout, final TextView picker, final Player player, final PlayerField field) {
         layout.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 int action = motionEvent.getAction();
                 float y = motionEvent.getY();
                 float x = motionEvent.getX();
-                handleLayoutTouchEvent(x, y, action, motionEvent, picker, layout);
+                handleLayoutTouchEvent(x, y, action, motionEvent, picker, layout, player, field);
                 return true;
             }
         });
     }
 
     private void handleLayoutTouchEvent(float x, float y, int action, MotionEvent motionEvent,
-                                        TextView picker, LinearLayout layout) {
+                                        TextView picker, LinearLayout layout, Player player, PlayerField field) {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 recordTouchStart(motionEvent, picker);
                 break;
             case MotionEvent.ACTION_MOVE:
-                verticalSwipe(y, picker);
+                verticalSwipe(y, picker, player, field);
                 sideSwipe(x);
                 break;
             case MotionEvent.ACTION_UP:
-                handleLayoutTouchRelease(y, picker, layout);
+                handleLayoutTouchRelease(y, picker, layout, player, field);
                 break;
             default:
                 //System.out.println("Default layout touchevent");
@@ -805,12 +739,12 @@ public class MainActivity extends SensorActivity {
         }
     }
 
-    private void handleLayoutTouchRelease(float y, TextView picker, LinearLayout layout) {
+    private void handleLayoutTouchRelease(float y, TextView picker, LinearLayout layout, final Player player, final PlayerField field) {
         setUpdateTextViewTexts(mPullToRefresh);
         if (mUpdating)
             resetDuel();
         else if (!mSideSwipe)
-            peripheralTouch(y, picker, layout);
+            peripheralTouch(y, picker, layout, player, field);
         else
             scaleTextView(picker, Constants.SCALE_DOWN);
         mWrapper.scrollTo(0, 0);
@@ -844,19 +778,19 @@ public class MainActivity extends SensorActivity {
         }
     }
 
-    private void verticalSwipe(float y, TextView picker) {
+    private void verticalSwipe(float y, TextView picker, Player player, PlayerField field) {
         if (!mSideSwipe && Math.abs(y - mPickerY) > mScreenHeight / 35) {
             mSpun = true;
             //System.out.println("Changing picker value");
             if (y > mPickerY)
-                changePickerValue(picker, false);
+                changePickerValue(picker, false, player, field);
             else
-                changePickerValue(picker, true);
+                changePickerValue(picker, true, player, field);
             mPickerY = y;
         }
     }
 
-    private void peripheralTouch(float y, TextView picker, LinearLayout layout) {
+    private void peripheralTouch(float y, TextView picker, LinearLayout layout, Player player, PlayerField field) {
         if (mSpun) {
             mSpun = false;
             scaleTextView(picker, Constants.SCALE_DOWN);
@@ -865,13 +799,13 @@ public class MainActivity extends SensorActivity {
             //System.out.println("Layout touch, coordinates and y: " + coordinates + " " + y);
             scaleTextView(picker, Constants.SCALE_DOWN);
             if (y > (coordinates[1] + layout.getHeight()) / 2)
-                changePickerValue(picker, false);
+                changePickerValue(picker, false, player, field);
             else
-                changePickerValue(picker, true);
+                changePickerValue(picker, true, player, field);
         }
     }
 
-    private void changePickerValue(TextView picker, boolean add) {
+    private void changePickerValue(TextView picker, boolean add, Player player, PlayerField field) {
         if (mSettings.getHapticFeedbackEnabled()) {
             picker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         }
@@ -881,6 +815,10 @@ public class MainActivity extends SensorActivity {
         else
             lifeTotal--;
         picker.setText(Integer.toString(lifeTotal));
+
+        mGameState.update(player, field, Integer.toString(lifeTotal));
+
+        // Move into update
         addToHistory(getTotals());
         if (checkLethal(picker)) {
             shakeLayout();
@@ -901,10 +839,7 @@ public class MainActivity extends SensorActivity {
     }
 
     private boolean checkLethal(TextView picker) {
-        return ((picker.equals(mLifePickerOne) || picker.equals(mLifePickerTwo))
-                && getPickerValue(picker) == Constants.LETHAL_LIFE) ||
-                ((picker.equals(mPoisonPickerOne) || picker.equals(mPoisonPickerTwo))
-                        && getPickerValue(picker) == Constants.LETHAL_POISON);
+        return mGameState.isLethal();
     }
 
     @Override
@@ -931,22 +866,10 @@ public class MainActivity extends SensorActivity {
     }
 
     public void resetDuel() {
-        String startingLife;
-        if (findViewById(R.id.starting_life_picker) != null) {
-            int index = ((NumberPicker) findViewById(R.id.starting_life_picker)).getValue();
-            String[] values = ((NumberPicker) findViewById(R.id.starting_life_picker))
-                    .getDisplayedValues();
-            startingLife = values[index];
-        }
-        else
-            startingLife = Constants.STARTING_LIFE;
-        mLifePickerOne.setText(startingLife);
-        mLifePickerTwo.setText(startingLife);
-        mPoisonPickerOne.setText(Constants.STARTING_POISON);
-        mPoisonPickerTwo.setText(Constants.STARTING_POISON);
-        mEnergyPickerOne.setText(Constants.STARTING_ENERGY);
-        mEnergyPickerTwo.setText(Constants.STARTING_ENERGY);
-        mHistory.clear();
+        mGameState = mSettings.buildNewGame();
+
+        setLifeTotals();
+
         ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).clear();
         mOptions.clear();
         instantiateArrayLists();
@@ -959,7 +882,7 @@ public class MainActivity extends SensorActivity {
         String timeStamp = Long.toString(System.currentTimeMillis());
         //System.out.println("Adding to history " + totals[0] + " " + totals[1] + " "
         //        + totals[2] + " " + totals[3] + " " + timeStamp);
-        mHistory.add(totals[0] + " " + totals[1] + " "
+        mGameState.getHistory().add(totals[0] + " " + totals[1] + " "
                 + totals[2] + " " + totals[3] + " " + totals[4] + " " + totals[5] + " " + timeStamp);
     }
 
@@ -970,20 +893,21 @@ public class MainActivity extends SensorActivity {
     }
 
 
-    private void setLifeTotals(String lifePickerOne, String poisonPickerOne,
-                               String lifePickerTwo, String poisonPickerTwo,
-                               String energyPickerOne, String energyPickerTwo) {
-        mLifePickerOne.setText(lifePickerOne);
-        mLifePickerTwo.setText(lifePickerTwo);
-        mPoisonPickerOne.setText(poisonPickerOne);
-        mPoisonPickerTwo.setText(poisonPickerTwo);
-        mEnergyPickerOne.setText(energyPickerOne);
-        mEnergyPickerTwo.setText(energyPickerTwo);
+    private void setLifeTotals() {
+        PlayerState playerOne = mGameState.getPlayerOne();
+        PlayerState playerTwo = mGameState.getPlayerTwo();
+
+        mLifePickerOne.setText(playerOne.getCurrentLife());
+        mLifePickerTwo.setText(playerTwo.getCurrentLife());
+        mPoisonPickerOne.setText(playerOne.getCurrentPoison());
+        mPoisonPickerTwo.setText(playerTwo.getCurrentPoison());
+        mEnergyPickerOne.setText(playerOne.getCurrentEnergy());
+        mEnergyPickerTwo.setText(playerTwo.getCurrentEnergy());
     }
 
     private void spinResetArrows() {
-        ImageView leftArrow = (ImageView) findViewById(R.id.update_arrow_left);
-        ImageView rightArrow = (ImageView) findViewById(R.id.update_arrow_right);
+        ImageView leftArrow = findViewById(R.id.update_arrow_left);
+        ImageView rightArrow = findViewById(R.id.update_arrow_right);
         RotateAnimation r = new RotateAnimation(mCurrentRotation, mCurrentRotation + 180.0f,
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
         r.setDuration((long) 300);

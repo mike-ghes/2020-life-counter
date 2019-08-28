@@ -101,14 +101,14 @@ public class SettingsListAdapter extends BaseAdapter {
     }
 
     private void setupTimerOption(View vi) {
-        NumberPicker np = (NumberPicker) vi.findViewById(R.id.round_time_picker);
+        NumberPicker np = vi.findViewById(R.id.round_time_picker);
         setDividerColor(np, Color.argb(0, 0, 0, 0));
         np.setEnabled(true);
         np.setDisplayedValues(mTimerOptions);
         np.setMinValue(0);
         np.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
         np.setMaxValue(mTimerOptions.length - 1);
-        TextView poisonToggle = (TextView) vi.findViewById(R.id.timer_toggle);
+        TextView poisonToggle = vi.findViewById(R.id.timer_toggle);
         setUpToggle(poisonToggle, mSettings.getTimerShowing());
         setToggle(poisonToggle, new toggleTimerCommand());
         np.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
@@ -151,7 +151,7 @@ public class SettingsListAdapter extends BaseAdapter {
     }
 
     private void setupStartingLifeOption(View vi) {
-        NumberPicker np = (NumberPicker) vi.findViewById(R.id.starting_life_picker);
+        NumberPicker np = vi.findViewById(R.id.starting_life_picker);
         setDividerColor(np, Color.argb(0, 0, 0, 0));
         np.setEnabled(true);
         np.setDisplayedValues(mStartingLifeValues);
@@ -213,19 +213,19 @@ public class SettingsListAdapter extends BaseAdapter {
     }
 
     private void setupPoisonOption(View vi) {
-        TextView poisonToggle = (TextView) vi.findViewById(R.id.poison_toggle);
+        TextView poisonToggle = vi.findViewById(R.id.poison_toggle);
         setUpToggle(poisonToggle, mSettings.getPoisonShowing());
         setToggle(poisonToggle, new togglePoisonCommand());
     }
 
     private void setupEnergyOption(View vi) {
-        TextView energyToggle = (TextView) vi.findViewById(R.id.energy_toggle);
+        TextView energyToggle = vi.findViewById(R.id.energy_toggle);
         setUpToggle(energyToggle, mSettings.getEnergyShowing());
         setToggle(energyToggle, new toggleEnergyCommand());
     }
 
     private void setupHapticOption(View vi) {
-        TextView hapticToggle = (TextView) vi.findViewById(R.id.poison_toggle);
+        TextView hapticToggle = vi.findViewById(R.id.poison_toggle);
         setUpToggle(hapticToggle, mSettings.getHapticFeedbackEnabled());
         setToggle(hapticToggle, new toggleHapticCommand());
     }
@@ -269,7 +269,7 @@ public class SettingsListAdapter extends BaseAdapter {
         @Override
         public void execute() {
             mSettings.setPoisonShowing(!mSettings.getPoisonShowing());
-            ((MainActivity) mContext).togglePoison();
+            ((MainActivity) mContext).togglePoison(mSettings.getPoisonShowing());
         }
     }
 
@@ -278,7 +278,7 @@ public class SettingsListAdapter extends BaseAdapter {
         @Override
         public void execute() {
             mSettings.setEnergyShowing(!mSettings.getEnergyShowing());
-            ((MainActivity) mContext).toggleEnergy();
+            ((MainActivity) mContext).toggleEnergy(mSettings.getEnergyShowing());
         }
     }
 
