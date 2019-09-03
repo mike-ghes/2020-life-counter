@@ -6,10 +6,10 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.annotation.NonNull;
 import android.support.v4.widget.DrawerLayout;
-import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
 import android.view.Display;
 import android.view.Gravity;
@@ -29,7 +29,6 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 
 public class MainActivity extends SensorActivity {
@@ -49,10 +48,6 @@ public class MainActivity extends SensorActivity {
 
     private ImageButton mSettingsButton;
     private ImageButton mHistoryButton;
-
-    private String mWhiteBackgroundColor;
-    private String mDarkGreyBackgroundColor;
-    private String mBlackBackgroundColor;
 
     private LinearLayout mWrapper;
 
@@ -81,7 +76,6 @@ public class MainActivity extends SensorActivity {
     private float mPickerX;
     private float mPickerLastX;
     private boolean mUpdating;
-
 
     private String mShowPoison;
     private String mHidePoison;
@@ -118,14 +112,11 @@ public class MainActivity extends SensorActivity {
         initElements();
 
         if (savedInstanceState != null) {
-            //System.out.println("Restoring state");
-
             mSettings = Settings.Companion.fromBundle(savedInstanceState);
 
             mGameState = GameState.Companion.fromBundle(savedInstanceState);
 
             setLifeTotals();
-
 
         } else {
             SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
@@ -153,21 +144,16 @@ public class MainActivity extends SensorActivity {
 
         BackgroundColor backgroundColor = mSettings.getBackgroundColor();
 
-        if (BackgroundColor.GREY == backgroundColor)
-            mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mDarkGreyBackgroundColor));
-        else if (BackgroundColor.BLACK == backgroundColor)
-            mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mBlackBackgroundColor));
-        //System.out.println(mPoisonShowing + " " + mStartingLife + " " + mWhiteBackground);
-        ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).setSettings(mSettings);
+        mSettingsDrawerLayout.setBackgroundColor(backgroundColor.getColor());
 
+        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).setSettings(mSettings);
     }
 
     @Override
-    protected void onStop(){
+    protected void onStop() {
         super.onStop();
 
-        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = settings.edit();
+        SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
 
         mGameState.saveTo(editor);
 
@@ -178,13 +164,9 @@ public class MainActivity extends SensorActivity {
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
-        //System.out.println("Saving state");
-
         mGameState.saveTo(savedInstanceState);
 
         mSettings.saveTo(savedInstanceState);
-
-        //System.out.println(savedInstanceState);
 
         super.onSaveInstanceState(savedInstanceState);
     }
@@ -218,7 +200,6 @@ public class MainActivity extends SensorActivity {
         mSettingsButton = findViewById(R.id.settings_button);
         mHistoryButton = findViewById(R.id.history_button);
 
-        mOptions = new ArrayList<>();
 
         mSettingsDrawerLayout = findViewById(R.id.drawer_layout);
 
@@ -229,6 +210,12 @@ public class MainActivity extends SensorActivity {
     }
 
     private void instantiateArrayLists() {
+        if (mOptions == null) {
+            mOptions = new ArrayList<>();
+        } else {
+            mOptions.clear();
+        }
+
         mOptions.add(getString(R.string.new_duel));
         mOptions.add(getString(R.string.starting_life_total));
         mOptions.add(mPoisonOption);
@@ -265,11 +252,11 @@ public class MainActivity extends SensorActivity {
             energyIconRight.setColorFilter(blue,
                     PorterDuff.Mode.SRC_ATOP);
 
-        ((ImageView)findViewById(R.id.update_arrow_left)).setImageDrawable(arrowLeft);
-        ((ImageView)findViewById(R.id.update_arrow_right)).setImageDrawable(arrowRight);
+        ((ImageView) findViewById(R.id.update_arrow_left)).setImageDrawable(arrowLeft);
+        ((ImageView) findViewById(R.id.update_arrow_right)).setImageDrawable(arrowRight);
 
-        ((ImageView)findViewById(R.id.energy_icon_one)).setImageDrawable(energyIconLeft);
-        ((ImageView)findViewById(R.id.energy_icon_two)).setImageDrawable(energyIconRight);
+        ((ImageView) findViewById(R.id.energy_icon_one)).setImageDrawable(energyIconLeft);
+        ((ImageView) findViewById(R.id.energy_icon_two)).setImageDrawable(energyIconRight);
     }
 
     private void collapseHistory() {
@@ -290,8 +277,8 @@ public class MainActivity extends SensorActivity {
             history.set(i, markedHistoryEntryRead(history.get(i)));
         }
         mGameState.setHistory(history);
-        ((HistoryListAdapter)mHistoryDrawerList.getAdapter()).clear();
-        ((HistoryListAdapter)mHistoryDrawerList.getAdapter()).addAll(history);
+        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).clear();
+        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).addAll(history);
     }
 
     private void showHistory() {
@@ -414,10 +401,6 @@ public class MainActivity extends SensorActivity {
         mPullToRefresh = getString(R.string.pull_to_restart);
         mReleaseToRefresh = getString(R.string.pull_to_cancel);
 
-        mWhiteBackgroundColor = getString(R.string.color_background_white);
-        mDarkGreyBackgroundColor = getString(R.string.color_background_black);
-        mBlackBackgroundColor = getString(R.string.color_black);
-
         mPoisonOption = mShowPoison;
 
         Display display = getWindowManager().getDefaultDisplay();
@@ -430,7 +413,7 @@ public class MainActivity extends SensorActivity {
         mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
         mSettingsDrawerLayout.setKeepScreenOn(true);
 
-       instantiateRoundTimer();
+        instantiateRoundTimer();
 
     }
 
@@ -542,7 +525,7 @@ public class MainActivity extends SensorActivity {
         }
         mOptions.set(mPoisonOptionIndex, mPoisonOption);
 
-        ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
+        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
     }
 
     private void displayEnergy() {
@@ -554,13 +537,11 @@ public class MainActivity extends SensorActivity {
             mEnergyLinerLayoutTwo.setVisibility(View.VISIBLE);
         }
 
-        ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
-
+        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
     }
 
-
     protected void checkShake(float x, float y, float z) {
-        float acceleration = (float) Math.sqrt((double) x*x + y*y + z*z);
+        float acceleration = (float) Math.sqrt((double) x * x + y * y + z * z);
         if (Math.abs(acceleration - mGravity) > Constants.THROW_ACCELERATION)
             startDiceThrowActivity(mSettings.getBackgroundColor());
     }
@@ -591,6 +572,8 @@ public class MainActivity extends SensorActivity {
                     break;
                 case 6:
                     break;
+                case 7:
+                    break;
                 default:
                     mSettingsDrawerLayout.closeDrawer(mSettingsDrawer);
                     break;
@@ -605,20 +588,9 @@ public class MainActivity extends SensorActivity {
         overridePendingTransition(R.anim.activity_slide_in_bottom, R.anim.activity_slide_out_top);
     }
 
-    public void toggleBackground() {
-        BackgroundColor targetBackground =
-                ((SettingsListAdapter)
-                        mSettingsDrawerList.getAdapter()).getBackground();
-        if (BackgroundColor.GREY == targetBackground) {
-            mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mDarkGreyBackgroundColor));
-            mSettings.setBackgroundColor(BackgroundColor.GREY);
-        } else if (BackgroundColor.BLACK == targetBackground) {
-            mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mBlackBackgroundColor));
-            mSettings.setBackgroundColor(BackgroundColor.BLACK);
-        } else {
-            mSettingsDrawerLayout.setBackgroundColor(Color.parseColor(mWhiteBackgroundColor));
-            mSettings.setBackgroundColor(BackgroundColor.WHITE);
-        }
+    public void toggleBackground(BackgroundColor targetBackground) {
+        mSettingsDrawerLayout.setBackgroundColor(targetBackground.getColor());
+        mSettings.setBackgroundColor(targetBackground);
     }
 
     public void togglePoison(boolean showPoison) {
@@ -820,7 +792,7 @@ public class MainActivity extends SensorActivity {
 
         // Move into update
         addToHistory(getTotals());
-        if (checkLethal(picker)) {
+        if (mGameState.isLethal()) {
             shakeLayout();
         }
     }
@@ -836,10 +808,6 @@ public class MainActivity extends SensorActivity {
 
     private int getPickerValue(TextView picker) {
         return Integer.parseInt(picker.getText().toString());
-    }
-
-    private boolean checkLethal(TextView picker) {
-        return mGameState.isLethal();
     }
 
     @Override
@@ -871,10 +839,9 @@ public class MainActivity extends SensorActivity {
         setLifeTotals();
 
         ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).clear();
-        mOptions.clear();
         instantiateArrayLists();
         addToHistory(getTotals());
-        ((SettingsListAdapter)mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
+        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
         ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).notifyDataSetChanged();
     }
 
@@ -888,8 +855,8 @@ public class MainActivity extends SensorActivity {
 
     public String[] getTotals() {
         return new String[]{mLifePickerOne.getText().toString(), mLifePickerTwo.getText().toString(),
-                           mPoisonPickerOne.getText().toString(), mPoisonPickerTwo.getText().toString(),
-                           mEnergyPickerOne.getText().toString(), mEnergyPickerTwo.getText().toString()};
+                mPoisonPickerOne.getText().toString(), mPoisonPickerTwo.getText().toString(),
+                mEnergyPickerOne.getText().toString(), mEnergyPickerTwo.getText().toString()};
     }
 
 

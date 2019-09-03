@@ -19,11 +19,10 @@ data class Settings(
 
     fun buildNewGame() = GameState(
             ArrayList(),
-            Constants.BASE_ROUND_TIME_IN_MS, // TODO: Use roundTimeInMinutes instead
+            minutesToMilliseconds(roundTimeInMinutes),
             PlayerState(startingLife.toString(), Constants.STARTING_ENERGY, Constants.STARTING_POISON),
             PlayerState(startingLife.toString(), Constants.STARTING_ENERGY, Constants.STARTING_POISON)
     )
-
     companion object {
         fun fromBundle(bundle: Bundle) = bundle.getSettings()
 
@@ -95,4 +94,8 @@ fun SharedPreferences.getSettings(): Settings {
             roundTimeInMinutes = roundTime,
             timerShowing = timerShowing,
             hapticFeedbackEnabled = mHapticFeedbackEnabled)
+}
+
+private fun minutesToMilliseconds(minutes: Int): Long {
+    return (minutes * 60 * 1000).toLong()
 }

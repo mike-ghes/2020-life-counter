@@ -299,39 +299,38 @@ public class SettingsListAdapter extends BaseAdapter {
     }
 
     private void setupBackgroundOption(View vi) {
-        final ImageView imageView = (ImageView) vi.findViewById(R.id.background_preview);
+        final ImageView imageView = vi.findViewById(R.id.background_preview);
+        updateColorSchemeDrawable(imageView);
+
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ImageView iw = (ImageView) v;
                 BackgroundColor backgroundColor = mSettings.getBackgroundColor();
                 if (BackgroundColor.WHITE == backgroundColor) {
-                    iw.setImageDrawable(v.getContext().getResources()
-                            .getDrawable(R.drawable.color_scheme_dark));
                     mSettings.setBackgroundColor(BackgroundColor.GREY);
                 } else if (BackgroundColor.GREY == backgroundColor) {
-                    iw.setImageDrawable(v.getContext().getResources()
-                            .getDrawable(R.drawable.color_scheme_black  ));
                     mSettings.setBackgroundColor(BackgroundColor.BLACK);
                 } else {
-                    iw.setImageDrawable(v.getContext().getResources()
-                            .getDrawable(R.drawable.color_scheme_light));
                     mSettings.setBackgroundColor(BackgroundColor.WHITE);
                 }
-                ((MainActivity)mContext).toggleBackground();
+
+                updateColorSchemeDrawable((ImageView) v);
+                ((MainActivity)mContext).toggleBackground(backgroundColor);
             }
         });
+    }
 
+    private void updateColorSchemeDrawable(ImageView v) {
         BackgroundColor backgroundColor = mSettings.getBackgroundColor();
-        if (BackgroundColor.GREY == backgroundColor)
-            imageView.setImageDrawable(vi.getContext().getResources()
-                    .getDrawable(R.drawable.color_scheme_dark));
-        else if (BackgroundColor.WHITE == backgroundColor)
-            imageView.setImageDrawable(vi.getContext().getResources()
-                    .getDrawable(R.drawable.color_scheme_light));
-        else
-            imageView.setImageDrawable(vi.getContext().getResources()
-                    .getDrawable(R.drawable.color_scheme_black));
+        Resources res = v.getResources();
+
+        if (BackgroundColor.GREY == backgroundColor) {
+            v.setImageDrawable(res.getDrawable(R.drawable.color_scheme_dark));
+        } else if (BackgroundColor.WHITE == backgroundColor) {
+            v.setImageDrawable(res.getDrawable(R.drawable.color_scheme_light));
+        } else {
+            v.setImageDrawable(res.getDrawable(R.drawable.color_scheme_black));
+        }
     }
 
     public BackgroundColor getBackground() {
