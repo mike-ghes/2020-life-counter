@@ -20,17 +20,30 @@ import java.util.ArrayList;
  */
 public class SettingsListAdapter extends BaseAdapter {
 
-    private Context mContext;
-    private ArrayList<String> mData;
+    interface Delegate {
+        void setTime(int i);
+        void toggleTimer();
+        void setStartingLife(int startingLife);
+        void togglePoison(boolean showPoison);
+        void toggleEnergy(boolean showEnergy);
+        void toggleHaptic(boolean hapticEnabled);
+        void toggleBackground(Theme targetBackground);
+    }
+
+
+    private final Context mContext;
+    private final Delegate mDelegate;
+    private ArrayList<String> mOptions;
     private static LayoutInflater mLayoutInflater;
 
     private Settings mSettings;
-    private String[] mStartingLifeValues;
-    private String[] mTimerOptions;
+    private final String[] mStartingLifeValues;
+    private final String[] mTimerOptions;
 
-    public SettingsListAdapter(Context context, ArrayList<String> data) {
+    public SettingsListAdapter(Context context, Delegate delegate, ArrayList<String> options) {
         mContext = context;
-        mData = data;
+        mDelegate = delegate;
+        mOptions = options;
         mLayoutInflater =
                 (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mStartingLifeValues =
@@ -41,12 +54,12 @@ public class SettingsListAdapter extends BaseAdapter {
 
     @Override
     public int getCount() {
-        return mData.size();
+        return mOptions.size();
     }
 
     @Override
     public Object getItem(int position) {
-        return mData.get(position);
+        return mOptions.get(position);
     }
 
     @Override
@@ -96,7 +109,7 @@ public class SettingsListAdapter extends BaseAdapter {
                 vi = mLayoutInflater.inflate(R.layout.settings_list_item, parent, false);
                 break;
         }
-        ((TextView)vi.findViewById(R.id.settings_text)).setText(mData.get(position));
+        ((TextView)vi.findViewById(R.id.settings_text)).setText(mOptions.get(position));
         return vi;
     }
 
@@ -114,8 +127,7 @@ public class SettingsListAdapter extends BaseAdapter {
         np.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
             @Override
             public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                ((MainActivity) mContext).
-                        setTime(Integer.parseInt(mTimerOptions[newVal]));
+                mDelegate.setTime(Integer.parseInt(mTimerOptions[newVal]));
                 mSettings.setRoundTimeInMinutes(Integer.parseInt(mTimerOptions[newVal]));
             }
         });
@@ -161,8 +173,7 @@ public class SettingsListAdapter extends BaseAdapter {
         np.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
             @Override
             public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                ((MainActivity) mContext).
-                        setmStartingLife(Integer.parseInt(mStartingLifeValues[newVal]));
+                mDelegate.setStartingLife(Integer.parseInt(mStartingLifeValues[newVal]));
                 mSettings.setStartingLife(Integer.parseInt(mStartingLifeValues[newVal]));
             }
         });
@@ -269,7 +280,7 @@ public class SettingsListAdapter extends BaseAdapter {
         @Override
         public void execute() {
             mSettings.setPoisonShowing(!mSettings.getPoisonShowing());
-            ((MainActivity) mContext).togglePoison(mSettings.getPoisonShowing());
+            mDelegate.togglePoison(mSettings.getPoisonShowing());
         }
     }
 
@@ -278,7 +289,7 @@ public class SettingsListAdapter extends BaseAdapter {
         @Override
         public void execute() {
             mSettings.setEnergyShowing(!mSettings.getEnergyShowing());
-            ((MainActivity) mContext).toggleEnergy(mSettings.getEnergyShowing());
+            mDelegate.toggleEnergy(mSettings.getEnergyShowing());
         }
     }
 
@@ -286,7 +297,7 @@ public class SettingsListAdapter extends BaseAdapter {
         @Override
         public void execute() {
             mSettings.setTimerShowing(!mSettings.getTimerShowing());
-            ((MainActivity) mContext).toggleTimer();
+            mDelegate.toggleTimer();
         }
     }
 
@@ -294,7 +305,7 @@ public class SettingsListAdapter extends BaseAdapter {
         @Override
         public void execute() {
             mSettings.setHapticFeedbackEnabled(!mSettings.getHapticFeedbackEnabled());
-            ((MainActivity) mContext).toggleHaptic(mSettings.getHapticFeedbackEnabled());
+            mDelegate.toggleHaptic(mSettings.getHapticFeedbackEnabled());
         }
     }
 
@@ -302,39 +313,21 @@ public class SettingsListAdapter extends BaseAdapter {
         final ImageView imageView = vi.findViewById(R.id.background_preview);
         updateColorSchemeDrawable(imageView);
 
-        imageView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                BackgroundColor backgroundColor = mSettings.getBackgroundColor();
-                if (BackgroundColor.WHITE == backgroundColor) {
-                    mSettings.setBackgroundColor(BackgroundColor.GREY);
-                } else if (BackgroundColor.GREY == backgroundColor) {
-                    mSettings.setBackgroundColor(BackgroundColor.BLACK);
-                } else {
-                    mSettings.setBackgroundColor(BackgroundColor.WHITE);
-                }
+        imageView.setOnClickListener(v -> {
+            mSettings.setTheme(mSettings.getTheme().next());
 
-                updateColorSchemeDrawable((ImageView) v);
-                ((MainActivity)mContext).toggleBackground(backgroundColor);
-            }
+            updateColorSchemeDrawable((ImageView) v);
+            mDelegate.toggleBackground(mSettings.getTheme());
         });
     }
 
     private void updateColorSchemeDrawable(ImageView v) {
-        BackgroundColor backgroundColor = mSettings.getBackgroundColor();
-        Resources res = v.getResources();
-
-        if (BackgroundColor.GREY == backgroundColor) {
-            v.setImageDrawable(res.getDrawable(R.drawable.color_scheme_dark));
-        } else if (BackgroundColor.WHITE == backgroundColor) {
-            v.setImageDrawable(res.getDrawable(R.drawable.color_scheme_light));
-        } else {
-            v.setImageDrawable(res.getDrawable(R.drawable.color_scheme_black));
-        }
+        Theme theme = mSettings.getTheme();
+        v.setImageDrawable(theme.getDrawable(v.getContext()));
     }
 
-    public BackgroundColor getBackground() {
-        return mSettings.getBackgroundColor();
+    public Theme getBackground() {
+        return mSettings.getTheme();
     }
 
     private void setDividerColor(NumberPicker picker, int color) {

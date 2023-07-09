@@ -4,13 +4,13 @@ import android.content.SharedPreferences
 import android.os.Bundle
 
 data class Settings(
-        var poisonShowing: Boolean,
-        var energyShowing: Boolean,
-        var startingLife: Int,
-        var backgroundColor: BackgroundColor,
-        var roundTimeInMinutes: Int,
-        var timerShowing: Boolean,
-        var hapticFeedbackEnabled: Boolean
+    var poisonShowing: Boolean,
+    var energyShowing: Boolean,
+    var startingLife: Int,
+    var theme: Theme,
+    var roundTimeInMinutes: Int,
+    var timerShowing: Boolean,
+    var hapticFeedbackEnabled: Boolean
 ) {
 
     fun saveTo(editor: SharedPreferences.Editor) = editor.putSettings(this)
@@ -32,7 +32,7 @@ data class Settings(
                 poisonShowing = false,
                 energyShowing = false,
                 startingLife = 20,
-                backgroundColor = BackgroundColor.WHITE,
+                theme = Theme.WHITE,
                 roundTimeInMinutes = 50,
                 timerShowing = false,
                 hapticFeedbackEnabled = false
@@ -41,7 +41,7 @@ data class Settings(
 }
 
 fun SharedPreferences.Editor.putSettings(settings: Settings) {
-    putInt(Constants.BACKGROUND_WHITE, settings.backgroundColor.ordinal)
+    putInt(Constants.BACKGROUND_WHITE, settings.theme.ordinal)
     putBoolean(Constants.POISON, settings.poisonShowing)
     putBoolean(Constants.ENERGY, settings.energyShowing)
     putBoolean(Constants.ENABLE_HAPTIC, settings.hapticFeedbackEnabled)
@@ -51,7 +51,7 @@ fun SharedPreferences.Editor.putSettings(settings: Settings) {
 }
 
 fun Bundle.putSettings(settings: Settings) {
-    putInt(Constants.BACKGROUND_WHITE, settings.backgroundColor.ordinal)
+    putInt(Constants.BACKGROUND_WHITE, settings.theme.ordinal)
     putBoolean(Constants.POISON, settings.poisonShowing)
     putBoolean(Constants.ENERGY, settings.energyShowing)
     putBoolean(Constants.ENABLE_HAPTIC, settings.hapticFeedbackEnabled)
@@ -61,39 +61,27 @@ fun Bundle.putSettings(settings: Settings) {
 }
 
 fun Bundle.getSettings(): Settings {
-    val mPoisonShowing = getBoolean(Constants.POISON)
-    val mEnergyShowing = getBoolean(Constants.ENERGY)
-    val mStartingLife = getInt(Constants.STARTING_LIFE)
-    val mBackgroundColor = getSerializable(Constants.BACKGROUND_WHITE) as BackgroundColor
-    val roundTime = getInt(Constants.ROUND_TIME)
-    val timerShowing = getBoolean(Constants.ROUND_TIMER_SHOWING)
-    val mHapticFeedbackEnabled = getBoolean(Constants.ENABLE_HAPTIC)
-
-    return Settings(poisonShowing = mPoisonShowing,
-            energyShowing = mEnergyShowing,
-            startingLife = mStartingLife,
-            backgroundColor = mBackgroundColor,
-            roundTimeInMinutes = roundTime,
-            timerShowing = timerShowing,
-            hapticFeedbackEnabled = mHapticFeedbackEnabled)
+    return Settings(
+        poisonShowing = getBoolean(Constants.POISON),
+        energyShowing = getBoolean(Constants.ENERGY),
+        startingLife = getInt(Constants.STARTING_LIFE),
+        theme = Theme.values()[getInt(Constants.BACKGROUND_WHITE, 0)],
+        roundTimeInMinutes = getInt(Constants.ROUND_TIME),
+        timerShowing = getBoolean(Constants.ROUND_TIMER_SHOWING),
+        hapticFeedbackEnabled = getBoolean(Constants.ENABLE_HAPTIC)
+    )
 }
 
 fun SharedPreferences.getSettings(): Settings {
-    val mPoisonShowing = getBoolean(Constants.POISON, false)
-    val mEnergyShowing = getBoolean(Constants.ENERGY, false)
-    val mStartingLife = getInt(Constants.STARTING_LIFE, Integer.parseInt(Constants.STARTING_LIFE))
-    val mBackgroundColor = BackgroundColor.values()[getInt(Constants.BACKGROUND_WHITE, 0)]
-    val roundTime = getInt(Constants.ROUND_TIME, 50)
-    val timerShowing = getBoolean(Constants.ROUND_TIMER_SHOWING, false)
-    val mHapticFeedbackEnabled = getBoolean(Constants.ENABLE_HAPTIC, false)
-
-    return Settings(poisonShowing = mPoisonShowing,
-            energyShowing = mEnergyShowing,
-            startingLife = mStartingLife,
-            backgroundColor = mBackgroundColor,
-            roundTimeInMinutes = roundTime,
-            timerShowing = timerShowing,
-            hapticFeedbackEnabled = mHapticFeedbackEnabled)
+    return Settings(
+        poisonShowing = getBoolean(Constants.POISON, false),
+        energyShowing = getBoolean(Constants.ENERGY, false),
+        startingLife = getInt(Constants.STARTING_LIFE, Integer.parseInt(Constants.STARTING_LIFE)),
+        theme = Theme.values()[getInt(Constants.BACKGROUND_WHITE, 0)],
+        roundTimeInMinutes = getInt(Constants.ROUND_TIME, 50),
+        timerShowing = getBoolean(Constants.ROUND_TIMER_SHOWING, false),
+        hapticFeedbackEnabled = getBoolean(Constants.ENABLE_HAPTIC, false)
+    )
 }
 
 private fun minutesToMilliseconds(minutes: Int): Long {

@@ -31,7 +31,7 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
-public class MainActivity extends SensorActivity {
+public class MainActivity extends SensorActivity implements SettingsListAdapter.Delegate {
 
     private LinearLayout mLifeLinearLayoutOne;
     private LinearLayout mLifeLinearLayoutTwo;
@@ -109,28 +109,25 @@ public class MainActivity extends SensorActivity {
 
         bindElements();
 
-        initElements();
-
         if (savedInstanceState != null) {
             mSettings = Settings.Companion.fromBundle(savedInstanceState);
 
             mGameState = GameState.Companion.fromBundle(savedInstanceState);
-
-            setLifeTotals();
-
         } else {
-            SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
+            SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
 
-            mGameState = GameState.Companion.fromPreferences(settings);
+            mGameState = GameState.Companion.fromPreferences(preferences);
 
-            mSettings = Settings.Companion.fromPreferences(settings);
-
-            setLifeTotals();
-
-            resetTimer(true);
-
-            restoreSettings();
+            mSettings = Settings.Companion.fromPreferences(preferences);
         }
+
+        initElements();
+
+        setLifeTotals();
+
+        resetTimer(true);
+
+        restoreSettings();
     }
 
     private void restoreSettings() {
@@ -142,17 +139,15 @@ public class MainActivity extends SensorActivity {
 
         toggleTimer();
 
-        BackgroundColor backgroundColor = mSettings.getBackgroundColor();
+        Theme theme = mSettings.getTheme();
 
-        mSettingsDrawerLayout.setBackgroundColor(backgroundColor.getColor());
+        mSettingsDrawerLayout.setBackgroundResource(theme.getBackground());
 
         ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).setSettings(mSettings);
     }
 
     @Override
     protected void onStop() {
-        super.onStop();
-
         SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
 
         mGameState.saveTo(editor);
@@ -160,6 +155,8 @@ public class MainActivity extends SensorActivity {
         mSettings.saveTo(editor);
 
         editor.apply();
+
+        super.onStop();
     }
 
     @Override
@@ -302,17 +299,13 @@ public class MainActivity extends SensorActivity {
         return split[0] + " " + split[1] + " " + split[2] + " " + split[3] + " " + split[4] + " " + split[5] + " " + split[6];
     }
 
-    public void setmStartingLife(int startingLife) {
+    public void setStartingLife(int startingLife) {
         mSettings.setStartingLife(startingLife);
     }
 
     private void initElements() {
-        mSettings = Settings.Companion.getDefault();
-
-        mGameState = mSettings.buildNewGame();
-
         instantiateArrayLists();
-        mSettingsDrawerList.setAdapter(new SettingsListAdapter(this, mOptions));
+        mSettingsDrawerList.setAdapter(new SettingsListAdapter(this, this, mOptions));
 
         mHistoryDrawerList.setAdapter(new HistoryListAdapter(this, mGameState.getHistory()));
 
@@ -337,26 +330,13 @@ public class MainActivity extends SensorActivity {
         mEnergyLinerLayoutOne.setVisibility(View.GONE);
         mEnergyLinerLayoutTwo.setVisibility(View.GONE);
 
-
-        mSettings = Settings.Companion.getDefault();
-
         mPoisonOptionIndex = 2;
 
         mCurrentRotation = 0.0f;
 
-        mSettingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mSettingsDrawerLayout.openDrawer(Gravity.LEFT);
-            }
-        });
+        mSettingsButton.setOnClickListener(v -> mSettingsDrawerLayout.openDrawer(Gravity.LEFT));
 
-        mHistoryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mSettingsDrawerLayout.openDrawer(Gravity.RIGHT);
-            }
-        });
+        mHistoryButton.setOnClickListener(v -> mSettingsDrawerLayout.openDrawer(Gravity.RIGHT));
 
         mSettingsDrawerLayout.setDrawerListener(new DrawerLayout.DrawerListener() {
             @Override
@@ -371,13 +351,8 @@ public class MainActivity extends SensorActivity {
                     //System.out.println(mHistory);
                     collapseHistory();
                     showHistory();
-                    mHistoryDrawerList.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            mHistoryDrawerList.
-                                    setSelection(mHistoryDrawerList.getAdapter().getCount());
-                        }
-                    });
+                    mHistoryDrawerList.post(() -> mHistoryDrawerList.
+                            setSelection(mHistoryDrawerList.getAdapter().getCount()));
                     mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, Gravity.RIGHT);
                 }
             }
@@ -423,27 +398,21 @@ public class MainActivity extends SensorActivity {
 
         mRoundTimerTextView = findViewById(R.id.round_timer);
 
-        mRoundTimerTextView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mTimerRunning)
-                    mRoundTimer.cancel();
-                else {
-                    mRoundTimer = getNewTimer(mGameState.getRemainingMillis());
-                    mRoundTimer.start();
-                }
-                mTimerRunning = !mTimerRunning;
+        mRoundTimerTextView.setOnClickListener(v -> {
+            if (mTimerRunning)
+                mRoundTimer.cancel();
+            else {
+                mRoundTimer = getNewTimer(mGameState.getRemainingMillis());
+                mRoundTimer.start();
             }
+            mTimerRunning = !mTimerRunning;
         });
 
         setTimerAnimations(true);
 
-        mRoundTimerTextView.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                resetTimer(false);
-                return true;
-            }
+        mRoundTimerTextView.setOnLongClickListener(v -> {
+            resetTimer(false);
+            return true;
         });
 
         //mRoundTimer.start();
@@ -543,7 +512,7 @@ public class MainActivity extends SensorActivity {
     protected void checkShake(float x, float y, float z) {
         float acceleration = (float) Math.sqrt((double) x * x + y * y + z * z);
         if (Math.abs(acceleration - mGravity) > Constants.THROW_ACCELERATION)
-            startDiceThrowActivity(mSettings.getBackgroundColor());
+            startDiceThrowActivity(mSettings.getTheme());
     }
 
     public void setTime(int i) {
@@ -568,7 +537,7 @@ public class MainActivity extends SensorActivity {
                     break;
                 case 5:
                     mSettingsDrawerLayout.closeDrawer(mSettingsDrawer);
-                    startDiceThrowActivity(mSettings.getBackgroundColor());
+                    startDiceThrowActivity(mSettings.getTheme());
                     break;
                 case 6:
                     break;
@@ -581,16 +550,16 @@ public class MainActivity extends SensorActivity {
         }
     }
 
-    private void startDiceThrowActivity(BackgroundColor backgroundColor) {
+    private void startDiceThrowActivity(Theme theme) {
         Intent i = new Intent(this, DiceActivity.class);
-        i.putExtra(Constants.BACKGROUND_WHITE, backgroundColor);
+        i.putExtra(Constants.BACKGROUND_WHITE, theme);
         startActivity(i);
         overridePendingTransition(R.anim.activity_slide_in_bottom, R.anim.activity_slide_out_top);
     }
 
-    public void toggleBackground(BackgroundColor targetBackground) {
-        mSettingsDrawerLayout.setBackgroundColor(targetBackground.getColor());
-        mSettings.setBackgroundColor(targetBackground);
+    public void toggleBackground(Theme targetBackground) {
+        mSettings.setTheme(targetBackground);
+        mSettingsDrawerLayout.setBackgroundResource(targetBackground.getBackground());
     }
 
     public void togglePoison(boolean showPoison) {
@@ -623,15 +592,12 @@ public class MainActivity extends SensorActivity {
     }
 
     private void setTextViewOnTouchListener(final TextView picker, final Player player, final PlayerField field) {
-        picker.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View view, MotionEvent motionEvent) {
-                int action = motionEvent.getAction();
-                float y = motionEvent.getY();
-                float x = motionEvent.getX();
-                handlePickerTouchEvent(x, y, action, motionEvent, picker, player, field);
-                return true;
-            }
+        picker.setOnTouchListener((view, motionEvent) -> {
+            int action = motionEvent.getAction();
+            float y = motionEvent.getY();
+            float x = motionEvent.getX();
+            handlePickerTouchEvent(x, y, action, motionEvent, picker, player, field);
+            return true;
         });
     }
 
@@ -680,15 +646,12 @@ public class MainActivity extends SensorActivity {
     }
 
     private void setLayoutTouchListener(final LinearLayout layout, final TextView picker, final Player player, final PlayerField field) {
-        layout.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View view, MotionEvent motionEvent) {
-                int action = motionEvent.getAction();
-                float y = motionEvent.getY();
-                float x = motionEvent.getX();
-                handleLayoutTouchEvent(x, y, action, motionEvent, picker, layout, player, field);
-                return true;
-            }
+        layout.setOnTouchListener((view, motionEvent) -> {
+            int action = motionEvent.getAction();
+            float y = motionEvent.getY();
+            float x = motionEvent.getX();
+            handleLayoutTouchEvent(x, y, action, motionEvent, picker, layout, player, field);
+            return true;
         });
     }
 
@@ -732,7 +695,7 @@ public class MainActivity extends SensorActivity {
     }
 
     private void sideSwipe(float x) {
-        if (!mSpun && Math.abs(x - mPickerLastX) > mScreenWidth / 40)
+        if (!mSpun && Math.abs(x - mPickerLastX) > mScreenWidth / 40f)
             mSideSwipe = true;
         if (mSideSwipe) {
             //System.out.println((int) (x - mPickerLastX));
@@ -751,13 +714,10 @@ public class MainActivity extends SensorActivity {
     }
 
     private void verticalSwipe(float y, TextView picker, Player player, PlayerField field) {
-        if (!mSideSwipe && Math.abs(y - mPickerY) > mScreenHeight / 35) {
+        if (!mSideSwipe && Math.abs(y - mPickerY) > mScreenHeight / 35f) {
             mSpun = true;
             //System.out.println("Changing picker value");
-            if (y > mPickerY)
-                changePickerValue(picker, false, player, field);
-            else
-                changePickerValue(picker, true, player, field);
+            changePickerValue(picker, y < mPickerY, player, field);
             mPickerY = y;
         }
     }
@@ -770,10 +730,8 @@ public class MainActivity extends SensorActivity {
             int[] coordinates = {0, 0};
             //System.out.println("Layout touch, coordinates and y: " + coordinates + " " + y);
             scaleTextView(picker, Constants.SCALE_DOWN);
-            if (y > (coordinates[1] + layout.getHeight()) / 2)
-                changePickerValue(picker, false, player, field);
-            else
-                changePickerValue(picker, true, player, field);
+            changePickerValue(picker, y < (coordinates[1] + layout.getHeight()) / 2f, player, field);
+
         }
     }
 

@@ -66,8 +66,6 @@ data class PlayerState(
 
 }
 
-
-
 fun SharedPreferences.Editor.putGameState(state: GameState) {
     putString(Constants.HISTORY, state.history.toString())
     putLong(Constants.REMAINING_ROUND_TIME, state.remainingMillis)

@@ -21,7 +21,7 @@ public class DiceActivity extends SensorActivity {
     private int mSteps;
     private Random mGenerator;
     private boolean mRolling;
-    private BackgroundColor mBackgroundColor;
+    private Theme mTheme;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,12 +33,12 @@ public class DiceActivity extends SensorActivity {
         initElements();
 
         if (savedInstanceState == null) {
-            mBackgroundColor =
-                    (BackgroundColor) getIntent().getSerializableExtra(Constants.BACKGROUND_WHITE);
+            mTheme =
+                    (Theme) getIntent().getSerializableExtra(Constants.BACKGROUND_WHITE);
             throwDice();
         } else {
-            mBackgroundColor =
-                    (BackgroundColor) savedInstanceState.getSerializable(Constants.BACKGROUND_WHITE);
+            mTheme =
+                    (Theme) savedInstanceState.getSerializable(Constants.BACKGROUND_WHITE);
             mRedDiceTextView.setText(savedInstanceState.getString(Constants.RED_DICE));
             mBlueDiceTextView.setText(savedInstanceState.getString(Constants.BLUE_DICE));
         }
@@ -50,18 +50,13 @@ public class DiceActivity extends SensorActivity {
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
-        savedInstanceState.putSerializable(Constants.BACKGROUND_WHITE, mBackgroundColor);
+        savedInstanceState.putSerializable(Constants.BACKGROUND_WHITE, mTheme);
         savedInstanceState.putString(Constants.RED_DICE, mRedDiceTextView.getText().toString());
         savedInstanceState.putString(Constants.BLUE_DICE, mBlueDiceTextView.getText().toString());
     }
 
     private void setBackgroundColor() {
-        if (BackgroundColor.GREY == mBackgroundColor)
-            mBackgroundLayout.setBackgroundColor(getResources().getColor(R.color.backgound_dark));
-        else if (BackgroundColor.BLACK == mBackgroundColor)
-            mBackgroundLayout.setBackgroundColor(getResources().getColor(R.color.backgound_black));
-        else
-            mBackgroundLayout.setBackgroundColor(getResources().getColor(R.color.background_light));
+        mBackgroundLayout.setBackgroundResource(mTheme.getBackground());
     }
 
     @Override
