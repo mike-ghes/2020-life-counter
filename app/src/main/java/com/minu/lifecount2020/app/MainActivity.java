@@ -8,8 +8,8 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.support.annotation.NonNull;
-import android.support.v4.widget.DrawerLayout;
+import androidx.annotation.NonNull;
+import androidx.drawerlayout.widget.DrawerLayout;
 import android.text.method.LinkMovementMethod;
 import android.view.Display;
 import android.view.Gravity;
@@ -311,6 +311,7 @@ public class MainActivity extends SensorActivity {
 
         mGameState = mSettings.buildNewGame();
 
+        instantiateArrayLists();
         mSettingsDrawerList.setAdapter(new SettingsListAdapter(this, mOptions));
 
         mHistoryDrawerList.setAdapter(new HistoryListAdapter(this, mGameState.getHistory()));
@@ -336,7 +337,6 @@ public class MainActivity extends SensorActivity {
         mEnergyLinerLayoutOne.setVisibility(View.GONE);
         mEnergyLinerLayoutTwo.setVisibility(View.GONE);
 
-        instantiateArrayLists();
 
         mSettings = Settings.Companion.getDefault();
 

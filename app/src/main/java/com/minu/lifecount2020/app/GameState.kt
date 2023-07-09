@@ -2,7 +2,6 @@ package com.minu.lifecount2020.app
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import java.util.*
 import kotlin.collections.ArrayList
 
 data class GameState(
@@ -100,15 +99,15 @@ fun Bundle.putGameState(state: GameState) {
 
 fun Bundle.getGameState(): GameState {
     val playerOne = PlayerState(
-            currentLife = getString(Constants.PICKER_ONE_LIFE),
-            currentPoison = getString(Constants.PICKER_ONE_POISON),
-            currentEnergy = getString(Constants.PICKER_ONE_ENERGY)
+            currentLife = getString(Constants.PICKER_ONE_LIFE)!!,
+            currentPoison = getString(Constants.PICKER_ONE_POISON)!!,
+            currentEnergy = getString(Constants.PICKER_ONE_ENERGY)!!
     )
 
     val playerTwo = PlayerState(
-            currentLife = getString(Constants.PICKER_TWO_LIFE),
-            currentPoison = getString(Constants.PICKER_TWO_POISON),
-            currentEnergy = getString(Constants.PICKER_TWO_ENERGY)
+            currentLife = getString(Constants.PICKER_TWO_LIFE)!!,
+            currentPoison = getString(Constants.PICKER_TWO_POISON)!!,
+            currentEnergy = getString(Constants.PICKER_TWO_ENERGY)!!
     )
     val history = getStringArrayList(Constants.HISTORY) ?: ArrayList()
 
@@ -118,25 +117,24 @@ fun Bundle.getGameState(): GameState {
 }
 
 fun SharedPreferences.getGameState(): GameState {
-    val lifeOne = getString(Constants.PICKER_ONE_LIFE, Constants.STARTING_LIFE)
-    val lifeTwo = getString(Constants.PICKER_TWO_LIFE, Constants.STARTING_LIFE)
-    val poisonOne = getString(Constants.PICKER_ONE_POISON, Constants.STARTING_POISON)
-    val poisonTwo = getString(Constants.PICKER_TWO_POISON, Constants.STARTING_POISON)
-    val energyOne = getString(Constants.PICKER_ONE_ENERGY, Constants.STARTING_ENERGY)
-    val energyTwo = getString(Constants.PICKER_TWO_ENERGY, Constants.STARTING_ENERGY)
+    val lifeOne = getString(Constants.PICKER_ONE_LIFE, Constants.STARTING_LIFE)!!
+    val lifeTwo = getString(Constants.PICKER_TWO_LIFE, Constants.STARTING_LIFE)!!
+    val poisonOne = getString(Constants.PICKER_ONE_POISON, Constants.STARTING_POISON)!!
+    val poisonTwo = getString(Constants.PICKER_TWO_POISON, Constants.STARTING_POISON)!!
+    val energyOne = getString(Constants.PICKER_ONE_ENERGY, Constants.STARTING_ENERGY)!!
+    val energyTwo = getString(Constants.PICKER_TWO_ENERGY, Constants.STARTING_ENERGY)!!
 
     val p1 = PlayerState(currentLife = lifeOne, currentEnergy = energyOne, currentPoison = poisonOne)
     val p2 = PlayerState(currentLife = lifeTwo, currentEnergy = energyTwo, currentPoison = poisonTwo)
 
     val historyAsString = getString(Constants.HISTORY, null)
-    val tempList: List<String>
-    if (historyAsString != null)
-        tempList = Arrays.asList(
-                *historyAsString.substring(1, historyAsString.length - 1).split(", ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-    else
-        tempList = java.util.ArrayList()
+    val tempList = historyAsString
+        ?.substring(1, historyAsString.length - 1)
+        ?.split(", ".toRegex())
+        ?.dropLastWhile { it.isEmpty() }
+        ?: emptyList()
 
-    val timeRemaining = getLong(Constants.REMAINING_ROUND_TIME, Constants.BASE_ROUND_TIME_IN_MS);
+    val timeRemaining = getLong(Constants.REMAINING_ROUND_TIME, Constants.BASE_ROUND_TIME_IN_MS)
 
     return GameState(history = ArrayList(tempList), remainingMillis = timeRemaining, playerOne = p1, playerTwo = p2)
 }

@@ -3,8 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/2020.iml" filepath="$PROJECT_DIR$/2020.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/bugfree-happiness.iml" filepath="$PROJECT_DIR$/bugfree-happiness.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/2020.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/2020.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/2020.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/2020.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/2020.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/2020.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/2020.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/2020.app.unitTest.iml" />
     </modules>
   </component>
 </project>
