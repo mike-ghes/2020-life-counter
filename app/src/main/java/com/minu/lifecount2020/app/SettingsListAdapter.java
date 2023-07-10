@@ -33,17 +33,26 @@ public class SettingsListAdapter extends BaseAdapter {
 
     private final Context mContext;
     private final Delegate mDelegate;
-    private ArrayList<String> mOptions;
+    private final ArrayList<String> mOptions;
     private static LayoutInflater mLayoutInflater;
 
     private Settings mSettings;
     private final String[] mStartingLifeValues;
     private final String[] mTimerOptions;
 
-    public SettingsListAdapter(Context context, Delegate delegate, ArrayList<String> options) {
+    public SettingsListAdapter(Context context, Delegate delegate) {
         mContext = context;
         mDelegate = delegate;
-        mOptions = options;
+        mOptions = new ArrayList<>();
+        mOptions.add(context.getString(R.string.new_duel));
+        mOptions.add(context.getString(R.string.starting_life_total));
+        mOptions.add(context.getString(R.string.poison));
+        mOptions.add(context.getString(R.string.energy));
+        mOptions.add(context.getString(R.string.color_scheme));
+        mOptions.add(context.getString(R.string.throw_dice));
+        mOptions.add(context.getString(R.string.round_timer));
+        mOptions.add(context.getString(R.string.haptic_feedback));
+
         mLayoutInflater =
                 (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mStartingLifeValues =

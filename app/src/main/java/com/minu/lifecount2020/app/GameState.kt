@@ -2,13 +2,13 @@ package com.minu.lifecount2020.app
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import kotlin.collections.ArrayList
+import java.io.Serializable
 
 data class GameState(
-        var history: ArrayList<String>,
-        var remainingMillis: Long,
-        var playerOne: PlayerState,
-        var playerTwo: PlayerState
+    var history: List<GameSnapshot>,
+    var remainingMillis: Long,
+    var playerOne: PlayerState,
+    var playerTwo: PlayerState
 ) {
 
     operator fun get(player: Player) = when(player) {
@@ -40,6 +40,36 @@ data class GameState(
         get(player).currentEnergy = value
     }
 
+    fun collapseHistory(): Boolean {
+        var currentTime: Long
+        var nextTime: Long
+
+        var i = 0
+        var didChange = false
+
+        val mutableList = history.toMutableList()
+
+        while (i + 1 < mutableList.size) {
+            if (!mutableList[i].isRead && !mutableList[i+1].isRead) {
+                currentTime = mutableList[i].timestamp.toLong()
+                nextTime = mutableList[i + 1].timestamp.toLong()
+                if (nextTime - currentTime < 2000) {
+                    mutableList.removeAt(i)
+                    i--
+                }
+                didChange = true
+            }
+            i++
+        }
+
+        for (i in mutableList.indices) {
+            mutableList[i] = mutableList[i].asRead()
+        }
+
+        history = mutableList
+        return didChange
+    }
+
     companion object {
         fun fromBundle(bundle: Bundle) = bundle.getGameState()
 
@@ -67,7 +97,7 @@ data class PlayerState(
 }
 
 fun SharedPreferences.Editor.putGameState(state: GameState) {
-    putString(Constants.HISTORY, state.history.toString())
+    putString(Constants.HISTORY, state.history.map { it.value }.toString())
     putLong(Constants.REMAINING_ROUND_TIME, state.remainingMillis)
 
     putString(Constants.PICKER_ONE_LIFE, state.playerOne.currentLife)
@@ -90,7 +120,7 @@ fun Bundle.putGameState(state: GameState) {
     putString(Constants.PICKER_TWO_POISON, state.playerTwo.currentPoison)
     putString(Constants.PICKER_TWO_ENERGY, state.playerTwo.currentEnergy)
 
-    putStringArrayList(Constants.HISTORY, state.history)
+    putStringArrayList(Constants.HISTORY, ArrayList(state.history.map { it.value }))
 
     putLong(Constants.REMAINING_ROUND_TIME, state.remainingMillis)
 }
@@ -107,7 +137,9 @@ fun Bundle.getGameState(): GameState {
             currentPoison = getString(Constants.PICKER_TWO_POISON)!!,
             currentEnergy = getString(Constants.PICKER_TWO_ENERGY)!!
     )
-    val history = getStringArrayList(Constants.HISTORY) ?: ArrayList()
+    val history = getStringArrayList(Constants.HISTORY)
+        ?.map { GameSnapshot(it) }
+        ?: mutableListOf()
 
     val remainingTime = getLong(Constants.REMAINING_ROUND_TIME)
 
@@ -130,9 +162,59 @@ fun SharedPreferences.getGameState(): GameState {
         ?.substring(1, historyAsString.length - 1)
         ?.split(", ".toRegex())
         ?.dropLastWhile { it.isEmpty() }
+        ?.map(::GameSnapshot)
         ?: emptyList()
 
     val timeRemaining = getLong(Constants.REMAINING_ROUND_TIME, Constants.BASE_ROUND_TIME_IN_MS)
 
     return GameState(history = ArrayList(tempList), remainingMillis = timeRemaining, playerOne = p1, playerTwo = p2)
+}
+
+//@JvmInline
+data class GameSnapshot(val tokens: List<String>): Serializable {
+
+    constructor(value: String): this(value.split(" "))
+
+    constructor(
+        leftLife: String,
+        rightLife: String,
+        leftPoison: String,
+        rightPoison: String,
+        leftEnergy: String,
+        rightEnergy: String,
+        timestamp: Long = System.currentTimeMillis()
+    ): this(listOf(leftLife, rightLife, leftPoison, rightPoison, leftEnergy, rightEnergy, timestamp.toString()))
+
+    val value: String
+        get() = "$leftLife $rightLife $leftPoison $rightPoison $leftEnergy $rightEnergy $timestamp"
+
+    val leftLife: String
+        get() = tokens[0]
+
+    val rightLife: String
+        get() = tokens[1]
+
+    val leftPoison: String
+        get() = tokens[2]
+
+    val rightPoison: String
+        get() = tokens[3]
+
+    val leftEnergy: String
+        get() = tokens[4]
+
+    val rightEnergy: String
+        get() = tokens[5]
+
+    val isRead: Boolean
+        get() = tokens[6].compareTo(Constants.READ) == 0
+
+    val timestamp: String
+        get() = tokens[6]
+
+    fun asRead(): GameSnapshot {
+        val split = tokens
+        return GameSnapshot("${split[0]} ${split[1]} ${split[2]} ${split[3]} ${split[4]} ${split[5]} ${Constants.READ}")
+    }
+
 }

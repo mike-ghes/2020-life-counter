@@ -30,4 +30,14 @@ enum class Theme(
     fun getDrawable(context: Context): Drawable {
         return ContextCompat.getDrawable(context, drawable)!!
     }
+
+
+    @ColorRes
+    val playerOne: Int = R.color.light_red_2020
+
+    @ColorRes
+    val playerTwo: Int = R.color.light_blue_2020
+
+    @ColorRes
+    val textColor: Int = R.color.text_light_grey
 }

@@ -3,13 +3,10 @@ package com.minu.lifecount2020.app;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import androidx.annotation.NonNull;
-import androidx.drawerlayout.widget.DrawerLayout;
 import android.text.method.LinkMovementMethod;
 import android.view.Display;
 import android.view.Gravity;
@@ -22,49 +19,28 @@ import android.view.animation.AnimationSet;
 import android.view.animation.AnimationUtils;
 import android.view.animation.RotateAnimation;
 import android.widget.AdapterView;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.databinding.DataBindingUtil;
+import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.minu.lifecount2020.app.databinding.ActivityMainBinding;
+
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class MainActivity extends SensorActivity implements SettingsListAdapter.Delegate {
 
-    private LinearLayout mLifeLinearLayoutOne;
-    private LinearLayout mLifeLinearLayoutTwo;
-    private LinearLayout mPoisonLinearLayoutOne;
-    private LinearLayout mPoisonLinearLayoutTwo;
-    private LinearLayout mEnergyLinerLayoutOne;
-    private LinearLayout mEnergyLinerLayoutTwo;
-    private TextView mLifePickerOne;
-    private TextView mLifePickerTwo;
-    private TextView mPoisonPickerOne;
-    private TextView mPoisonPickerTwo;
-    private TextView mEnergyPickerOne;
-    private TextView mEnergyPickerTwo;
-
-    private ImageButton mSettingsButton;
-    private ImageButton mHistoryButton;
-
-    private LinearLayout mWrapper;
-
-    private TextView mLeftUpdateTextView;
-    private TextView mRighyUpdateTextView;
+    private ActivityMainBinding binding;
 
     private Settings mSettings;
 
     private GameState mGameState;
-
-    private ArrayList<String> mOptions;
-
-    private DrawerLayout mSettingsDrawerLayout;
-    private ListView mSettingsDrawerList;
-    private RelativeLayout mSettingsDrawer;
-
-    private ListView mHistoryDrawerList;
 
     private int mScreenHeight;
     private int mScreenWidth;
@@ -77,27 +53,20 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     private float mPickerLastX;
     private boolean mUpdating;
 
-    private String mShowPoison;
-    private String mHidePoison;
-
     private String mPullToRefresh;
     private String mReleaseToRefresh;
-
-    private String mPoisonOption = mShowPoison;
-    private int mPoisonOptionIndex;
 
     private float mCurrentRotation;
 
     private CountDownTimer mRoundTimer;
     private TextView mRoundTimerTextView;
     private boolean mTimerRunning;
-    private String mEnergyOption;
-    private String mHapticOption;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
         if (!isTaskRoot()) {
             // Android launch bug
@@ -106,8 +75,6 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         }
 
         hideSystemUI();
-
-        bindElements();
 
         if (savedInstanceState != null) {
             mSettings = Settings.Companion.fromBundle(savedInstanceState);
@@ -121,6 +88,8 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
             mSettings = Settings.Companion.fromPreferences(preferences);
         }
 
+        applyTheme(mSettings.getTheme());
+
         initElements();
 
         setLifeTotals();
@@ -131,19 +100,13 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     }
 
     private void restoreSettings() {
-        mPoisonOption = mShowPoison;
-
         displayPoison();
 
         displayEnergy();
 
         toggleTimer();
 
-        Theme theme = mSettings.getTheme();
-
-        mSettingsDrawerLayout.setBackgroundResource(theme.getBackground());
-
-        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).setSettings(mSettings);
+        ((SettingsListAdapter) binding.leftDrawer.getAdapter()).setSettings(mSettings);
     }
 
     @Override
@@ -168,86 +131,35 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         super.onSaveInstanceState(savedInstanceState);
     }
 
-    private void bindElements() {
-        mLifeLinearLayoutOne = findViewById(R.id.first_life_picker_layout);
-        mLifeLinearLayoutTwo = findViewById(R.id.second_life_picker_layout);
-
-        mPoisonLinearLayoutOne = findViewById(R.id.first_poison_picker_layout);
-        mPoisonLinearLayoutTwo = findViewById(R.id.second_poison_picker_layout);
-
-        mEnergyLinerLayoutOne = findViewById(R.id.first_energy_picker_layout);
-        mEnergyLinerLayoutTwo = findViewById(R.id.second_energy_picker_layout);
-
-        mLifePickerOne = findViewById(R.id.life_picker_1);
-        mLifePickerTwo = findViewById(R.id.life_picker_2);
-
-        mPoisonPickerOne = findViewById(R.id.poison_picker_1);
-        mPoisonPickerTwo = findViewById(R.id.poison_picker_2);
-
-        mEnergyPickerOne = findViewById(R.id.energy_picker_1);
-        mEnergyPickerTwo = findViewById(R.id.energy_picker_2);
-
-        setInitialColors();
-
-        mWrapper = findViewById(R.id.wrapper);
-
-        mLeftUpdateTextView = findViewById(R.id.update);
-        mRighyUpdateTextView = findViewById(R.id.update_2);
-
-        mSettingsButton = findViewById(R.id.settings_button);
-        mHistoryButton = findViewById(R.id.history_button);
-
-
-        mSettingsDrawerLayout = findViewById(R.id.drawer_layout);
-
-        mSettingsDrawer = findViewById(R.id.settings_drawer);
-
-        mSettingsDrawerList = findViewById(R.id.left_drawer);
-        mHistoryDrawerList = findViewById(R.id.right_drawer);
-    }
-
     private void instantiateArrayLists() {
-        if (mOptions == null) {
-            mOptions = new ArrayList<>();
-        } else {
-            mOptions.clear();
-        }
 
-        mOptions.add(getString(R.string.new_duel));
-        mOptions.add(getString(R.string.starting_life_total));
-        mOptions.add(mPoisonOption);
-        mOptions.add(getString(R.string.energy));
-        mOptions.add(getString(R.string.color_scheme));
-        mOptions.add(getString(R.string.throw_dice));
-        mOptions.add(getString(R.string.round_timer));
-        mOptions.add(getString(R.string.haptic_feedback));
     }
 
-    private void setInitialColors() {
-        int red = Color.parseColor(getString(R.string.color_red));
-        int blue = Color.parseColor(getString(R.string.color_blue));
-        mLifePickerOne.setTextColor(red);
-        mPoisonPickerOne.setTextColor(red);
-        mEnergyPickerOne.setTextColor(red);
-        mLifePickerTwo.setTextColor(blue);
-        mPoisonPickerTwo.setTextColor(blue);
-        mEnergyPickerTwo.setTextColor(blue);
-        Drawable arrowLeft = getResources().getDrawable(R.drawable.left_arrow);
-        Drawable arrowRight = getResources().getDrawable(R.drawable.right_arrow);
-        Drawable energyIconLeft = getResources().getDrawable(R.drawable.energy_icon_left);
-        Drawable energyIconRight = getResources().getDrawable(R.drawable.energy_icon_right);
+    private void applyTheme(Theme theme) {
+        binding.drawerLayout.setBackgroundResource(theme.getBackground());
+
+        int playerOne = ContextCompat.getColor(this, theme.getPlayerOne());
+        int playerTwo = ContextCompat.getColor(this, theme.getPlayerTwo());
+        int textColor = ContextCompat.getColor(this, theme.getTextColor());
+        binding.lifePicker1.setTextColor(playerOne);
+        binding.poisonPicker1.setTextColor(playerOne);
+        binding.energyPicker1.setTextColor(playerOne);
+        binding.lifePicker2.setTextColor(playerTwo);
+        binding.poisonPicker2.setTextColor(playerTwo);
+        binding.energyPicker2.setTextColor(playerTwo);
+
+        Drawable arrowLeft = ContextCompat.getDrawable(this, R.drawable.left_arrow);
+        Drawable arrowRight = ContextCompat.getDrawable(this, R.drawable.right_arrow);
+        Drawable energyIconLeft = ContextCompat.getDrawable(this, R.drawable.energy_icon_left);
+        Drawable energyIconRight = ContextCompat.getDrawable(this, R.drawable.energy_icon_right);
         if (arrowLeft != null)
-            arrowLeft.setColorFilter(Color.parseColor(getString(R.string.color_text)),
-                    PorterDuff.Mode.SRC_ATOP);
+            arrowLeft.setColorFilter(textColor, PorterDuff.Mode.SRC_ATOP);
         if (arrowRight != null)
-            arrowRight.setColorFilter(Color.parseColor(getString(R.string.color_text)),
-                    PorterDuff.Mode.SRC_ATOP);
+            arrowRight.setColorFilter(textColor, PorterDuff.Mode.SRC_ATOP);
         if (energyIconLeft != null)
-            energyIconLeft.setColorFilter(red,
-                    PorterDuff.Mode.SRC_ATOP);
+            energyIconLeft.setColorFilter(playerOne, PorterDuff.Mode.SRC_ATOP);
         if (energyIconRight != null)
-            energyIconRight.setColorFilter(blue,
-                    PorterDuff.Mode.SRC_ATOP);
+            energyIconRight.setColorFilter(playerTwo, PorterDuff.Mode.SRC_ATOP);
 
         ((ImageView) findViewById(R.id.update_arrow_left)).setImageDrawable(arrowLeft);
         ((ImageView) findViewById(R.id.update_arrow_right)).setImageDrawable(arrowRight);
@@ -257,46 +169,8 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     }
 
     private void collapseHistory() {
-        long currentTime;
-        long nextTime;
-        ArrayList<String> history = mGameState.getHistory();
-        for (int i = 0; i + 1 < history.size(); i++) {
-            if (!isHistoryEntryRead(history.get(i))) {
-                currentTime = parseTimeStamp(history.get(i));
-                nextTime = parseTimeStamp(history.get(i + 1));
-                if (nextTime - currentTime < 2000) {
-                    history.remove(i);
-                    i--;
-                }
-            }
-        }
-        for (int i = 0; i < history.size(); i++) {
-            history.set(i, markedHistoryEntryRead(history.get(i)));
-        }
-        mGameState.setHistory(history);
-        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).clear();
-        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).addAll(history);
-    }
-
-    private void showHistory() {
-        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).notifyDataSetChanged();
-    }
-
-    private long parseTimeStamp(String historyEntry) {
-        String timeString = historyEntry.split(" ")[6];
-        return Long.parseLong(timeString);
-    }
-
-    private boolean isHistoryEntryRead(String historyEntry) {
-        //System.out.println(mHistory);
-        String read = historyEntry.split(" ")[6];
-        return read.compareTo(Constants.READ) == 0;
-    }
-
-    private String markedHistoryEntryRead(String historyEntry) {
-        String[] split = historyEntry.split(" ");
-        split[6] = Constants.READ;
-        return split[0] + " " + split[1] + " " + split[2] + " " + split[3] + " " + split[4] + " " + split[5] + " " + split[6];
+        mGameState.collapseHistory();
+        ((HistoryListAdapter) binding.rightDrawer.getAdapter()).setHistory(new ArrayList<>(mGameState.getHistory()));
     }
 
     public void setStartingLife(int startingLife) {
@@ -304,41 +178,38 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     }
 
     private void initElements() {
-        instantiateArrayLists();
-        mSettingsDrawerList.setAdapter(new SettingsListAdapter(this, this, mOptions));
+        binding.leftDrawer.setAdapter(new SettingsListAdapter(this, this));
 
-        mHistoryDrawerList.setAdapter(new HistoryListAdapter(this, mGameState.getHistory()));
+        binding.rightDrawer.setAdapter(new HistoryListAdapter(this, new ArrayList<>(mGameState.getHistory())));
 
-        mSettingsDrawerList.setOnItemClickListener(new DrawerItemClickListener());
+        binding.leftDrawer.setOnItemClickListener(new DrawerItemClickListener());
 
-        setLayoutTouchListener(mLifeLinearLayoutOne, mLifePickerOne, Player.ONE, PlayerField.Life);
-        setLayoutTouchListener(mLifeLinearLayoutTwo, mLifePickerTwo, Player.TWO, PlayerField.Life);
-        setLayoutTouchListener(mPoisonLinearLayoutOne, mPoisonPickerOne, Player.ONE, PlayerField.Poison);
-        setLayoutTouchListener(mPoisonLinearLayoutTwo, mPoisonPickerTwo, Player.TWO, PlayerField.Poison);
-        setLayoutTouchListener(mEnergyLinerLayoutOne, mEnergyPickerOne, Player.ONE, PlayerField.Energy);
-        setLayoutTouchListener(mEnergyLinerLayoutTwo, mEnergyPickerTwo, Player.TWO, PlayerField.Energy);
-        setTextViewOnTouchListener(mLifePickerOne, Player.ONE, PlayerField.Life);
-        setTextViewOnTouchListener(mLifePickerTwo, Player.TWO, PlayerField.Life);
-        setTextViewOnTouchListener(mPoisonPickerOne, Player.ONE, PlayerField.Poison);
-        setTextViewOnTouchListener(mPoisonPickerTwo, Player.TWO, PlayerField.Poison);
-        setTextViewOnTouchListener(mEnergyPickerOne, Player.ONE, PlayerField.Energy);
-        setTextViewOnTouchListener(mEnergyPickerTwo, Player.TWO, PlayerField.Energy);
+        setLayoutTouchListener(binding.firstLifePickerLayout, binding.lifePicker1, Player.ONE, PlayerField.Life);
+        setLayoutTouchListener(binding.secondLifePickerLayout, binding.lifePicker2, Player.TWO, PlayerField.Life);
+        setLayoutTouchListener(binding.firstPoisonPickerLayout, binding.poisonPicker1, Player.ONE, PlayerField.Poison);
+        setLayoutTouchListener(binding.secondPoisonPickerLayout, binding.poisonPicker2, Player.TWO, PlayerField.Poison);
+        setLayoutTouchListener(binding.firstEnergyPickerLayout, binding.energyPicker1, Player.ONE, PlayerField.Energy);
+        setLayoutTouchListener(binding.secondEnergyPickerLayout, binding.energyPicker2, Player.TWO, PlayerField.Energy);
+        setTextViewOnTouchListener(binding.lifePicker1, Player.ONE, PlayerField.Life);
+        setTextViewOnTouchListener(binding.lifePicker2, Player.TWO, PlayerField.Life);
+        setTextViewOnTouchListener(binding.poisonPicker1, Player.ONE, PlayerField.Poison);
+        setTextViewOnTouchListener(binding.poisonPicker2, Player.TWO, PlayerField.Poison);
+        setTextViewOnTouchListener(binding.energyPicker1, Player.ONE, PlayerField.Energy);
+        setTextViewOnTouchListener(binding.energyPicker2, Player.TWO, PlayerField.Energy);
 
-        mPoisonLinearLayoutOne.setVisibility(View.GONE);
-        mPoisonLinearLayoutTwo.setVisibility(View.GONE);
+        binding.firstPoisonPickerLayout.setVisibility(View.GONE);
+        binding.secondPoisonPickerLayout.setVisibility(View.GONE);
 
-        mEnergyLinerLayoutOne.setVisibility(View.GONE);
-        mEnergyLinerLayoutTwo.setVisibility(View.GONE);
-
-        mPoisonOptionIndex = 2;
+        binding.firstEnergyPickerLayout.setVisibility(View.GONE);
+        binding.secondEnergyPickerLayout.setVisibility(View.GONE);
 
         mCurrentRotation = 0.0f;
 
-        mSettingsButton.setOnClickListener(v -> mSettingsDrawerLayout.openDrawer(Gravity.LEFT));
+        binding.settingsButton.setOnClickListener(v -> binding.drawerLayout.openDrawer(Gravity.LEFT));
 
-        mHistoryButton.setOnClickListener(v -> mSettingsDrawerLayout.openDrawer(Gravity.RIGHT));
+        binding.historyButton.setOnClickListener(v -> binding.drawerLayout.openDrawer(Gravity.RIGHT));
 
-        mSettingsDrawerLayout.setDrawerListener(new DrawerLayout.DrawerListener() {
+        binding.drawerLayout.setDrawerListener(new DrawerLayout.DrawerListener() {
             @Override
             public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
 
@@ -346,20 +217,19 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
 
             @Override
             public void onDrawerOpened(@NonNull View drawerView) {
-                if (drawerView.equals(mHistoryDrawerList)) {
+                if (drawerView.equals(binding.rightDrawer)) {
                     //System.out.println("Should show history");
                     //System.out.println(mHistory);
                     collapseHistory();
-                    showHistory();
-                    mHistoryDrawerList.post(() -> mHistoryDrawerList.
-                            setSelection(mHistoryDrawerList.getAdapter().getCount()));
-                    mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, Gravity.RIGHT);
+                    binding.rightDrawer.post(() -> binding.rightDrawer.
+                            setSelection(binding.rightDrawer.getAdapter().getCount()));
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, Gravity.RIGHT);
                 }
             }
 
             @Override
             public void onDrawerClosed(@NonNull View drawerView) {
-                mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
+                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
             }
 
             @Override
@@ -368,15 +238,8 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
             }
         });
 
-        mShowPoison = getString(R.string.poison);
-        mHidePoison = getString(R.string.poison);
-        mEnergyOption = getString(R.string.energy);
-        mHapticOption = getString(R.string.haptic_feedback);
-
         mPullToRefresh = getString(R.string.pull_to_restart);
         mReleaseToRefresh = getString(R.string.pull_to_cancel);
-
-        mPoisonOption = mShowPoison;
 
         Display display = getWindowManager().getDefaultDisplay();
         mScreenHeight = display.getWidth();
@@ -385,8 +248,8 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         ((TextView) findViewById(R.id.twitter_link))
                 .setMovementMethod(LinkMovementMethod.getInstance());
 
-        mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
-        mSettingsDrawerLayout.setKeepScreenOn(true);
+        binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
+        binding.drawerLayout.setKeepScreenOn(true);
 
         instantiateRoundTimer();
 
@@ -396,7 +259,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         mGameState.setRemainingMillis(Constants.BASE_ROUND_TIME_IN_MS);
         mRoundTimer = getNewTimer(Constants.BASE_ROUND_TIME_IN_MS);
 
-        mRoundTimerTextView = findViewById(R.id.round_timer);
+        mRoundTimerTextView = binding.roundTimer;
 
         mRoundTimerTextView.setOnClickListener(v -> {
             if (mTimerRunning)
@@ -452,7 +315,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     }
 
     private long minutesToMilliseconds(int minutes) {
-        return minutes * 60 * 1000;
+        return minutes * 60 * 1000L;
     }
 
     private CountDownTimer getNewTimer(long startingTime) {
@@ -484,29 +347,26 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
 
     private void displayPoison() {
         if (!mSettings.getPoisonShowing()) {
-            mPoisonLinearLayoutOne.setVisibility(View.GONE);
-            mPoisonLinearLayoutTwo.setVisibility(View.GONE);
-            mPoisonOption = mShowPoison;
+            binding.firstPoisonPickerLayout.setVisibility(View.GONE);
+            binding.secondPoisonPickerLayout.setVisibility(View.GONE);
         } else {
-            mPoisonLinearLayoutOne.setVisibility(View.VISIBLE);
-            mPoisonLinearLayoutTwo.setVisibility(View.VISIBLE);
-            mPoisonOption = mHidePoison;
+            binding.firstPoisonPickerLayout.setVisibility(View.VISIBLE);
+            binding.secondPoisonPickerLayout.setVisibility(View.VISIBLE);
         }
-        mOptions.set(mPoisonOptionIndex, mPoisonOption);
 
-        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
+        ((SettingsListAdapter) binding.leftDrawer.getAdapter()).notifyDataSetChanged();
     }
 
     private void displayEnergy() {
         if (!mSettings.getEnergyShowing()) {
-            mEnergyLinerLayoutOne.setVisibility(View.GONE);
-            mEnergyLinerLayoutTwo.setVisibility(View.GONE);
+            binding.firstEnergyPickerLayout.setVisibility(View.GONE);
+            binding.secondEnergyPickerLayout.setVisibility(View.GONE);
         } else {
-            mEnergyLinerLayoutOne.setVisibility(View.VISIBLE);
-            mEnergyLinerLayoutTwo.setVisibility(View.VISIBLE);
+            binding.firstEnergyPickerLayout.setVisibility(View.VISIBLE);
+            binding.secondEnergyPickerLayout.setVisibility(View.VISIBLE);
         }
 
-        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
+        ((SettingsListAdapter) binding.leftDrawer.getAdapter()).notifyDataSetChanged();
     }
 
     protected void checkShake(float x, float y, float z) {
@@ -525,7 +385,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
             switch (position) {
                 case 0:
                     resetDuel();
-                    mSettingsDrawerLayout.closeDrawer(mSettingsDrawer);
+                    binding.drawerLayout.closeDrawer(binding.settingsDrawer);
                     break;
                 case 1:
                     break;
@@ -536,7 +396,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
                 case 4:
                     break;
                 case 5:
-                    mSettingsDrawerLayout.closeDrawer(mSettingsDrawer);
+                    binding.drawerLayout.closeDrawer(binding.settingsDrawer);
                     startDiceThrowActivity(mSettings.getTheme());
                     break;
                 case 6:
@@ -544,7 +404,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
                 case 7:
                     break;
                 default:
-                    mSettingsDrawerLayout.closeDrawer(mSettingsDrawer);
+                    binding.drawerLayout.closeDrawer(binding.settingsDrawer);
                     break;
             }
         }
@@ -559,7 +419,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
 
     public void toggleBackground(Theme targetBackground) {
         mSettings.setTheme(targetBackground);
-        mSettingsDrawerLayout.setBackgroundResource(targetBackground.getBackground());
+        applyTheme(targetBackground);
     }
 
     public void togglePoison(boolean showPoison) {
@@ -632,15 +492,15 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         setUpdateTextViewTexts(mPullToRefresh);
         if (mUpdating)
             resetDuel();
-        mWrapper.scrollTo(0, 0);
+        binding.wrapper.scrollTo(0, 0);
         mUpdating = false;
         mSideSwipe = false;
     }
 
     private void setUpdateTextViewTexts(String s) {
-        if (mLeftUpdateTextView.getText().toString().compareTo(s) != 0) {
-            mRighyUpdateTextView.setText(s);
-            mLeftUpdateTextView.setText(s);
+        if (binding.update.getText().toString().compareTo(s) != 0) {
+            binding.update2.setText(s);
+            binding.update.setText(s);
             spinResetArrows();
         }
     }
@@ -682,7 +542,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
             peripheralTouch(y, picker, layout, player, field);
         else
             scaleTextView(picker, Constants.SCALE_DOWN);
-        mWrapper.scrollTo(0, 0);
+        binding.wrapper.scrollTo(0, 0);
         mUpdating = false;
         mSideSwipe = false;
     }
@@ -700,7 +560,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         if (mSideSwipe) {
             //System.out.println((int) (x - mPickerLastX));
             if (!mUpdating)
-                mWrapper.scrollBy((int) -(x - mPickerLastX) / 2, 0);
+                binding.wrapper.scrollBy((int) -(x - mPickerLastX) / 2, 0);
             //System.out.println("Side swiping");
             if (Math.abs(x - mPickerX) > mScreenWidth / 3.5f) {
                 setUpdateTextViewTexts(mReleaseToRefresh);
@@ -744,12 +604,12 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
             lifeTotal++;
         else
             lifeTotal--;
-        picker.setText(Integer.toString(lifeTotal));
+        picker.setText(String.format(Locale.getDefault(), "%d", lifeTotal));
 
         mGameState.update(player, field, Integer.toString(lifeTotal));
 
         // Move into update
-        addToHistory(getTotals());
+        mGameState.getHistory().add(getTotals());
         if (mGameState.isLethal()) {
             shakeLayout();
         }
@@ -761,7 +621,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         Animation unShakeAnimation = AnimationUtils.loadAnimation(this, R.anim.unshake_main_layout);
         animations.addAnimation(shakeAnimation);
         animations.addAnimation(unShakeAnimation);
-        findViewById(R.id.left_update).startAnimation(animations);
+        binding.leftUpdate.startAnimation(animations);
     }
 
     private int getPickerValue(TextView picker) {
@@ -772,8 +632,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     public void onResume() {
         super.onResume();
         //System.out.println("RESUMING");
-        mSettingsDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
-        mOptions.set(mPoisonOptionIndex, mPoisonOption);
+        binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, Gravity.RIGHT);
         restoreSettings();
         hideSystemUI();
     }
@@ -796,25 +655,23 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
 
         setLifeTotals();
 
-        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).clear();
+        ((HistoryListAdapter) binding.rightDrawer.getAdapter()).clear();
         instantiateArrayLists();
-        addToHistory(getTotals());
-        ((SettingsListAdapter) mSettingsDrawerList.getAdapter()).notifyDataSetChanged();
-        ((HistoryListAdapter) mHistoryDrawerList.getAdapter()).notifyDataSetChanged();
+        mGameState.getHistory().add(getTotals());
+        ((SettingsListAdapter) binding.leftDrawer.getAdapter()).notifyDataSetChanged();
+        ((HistoryListAdapter) binding.rightDrawer.getAdapter()).notifyDataSetChanged();
     }
 
-    public void addToHistory(String[] totals) {
-        String timeStamp = Long.toString(System.currentTimeMillis());
-        //System.out.println("Adding to history " + totals[0] + " " + totals[1] + " "
-        //        + totals[2] + " " + totals[3] + " " + timeStamp);
-        mGameState.getHistory().add(totals[0] + " " + totals[1] + " "
-                + totals[2] + " " + totals[3] + " " + totals[4] + " " + totals[5] + " " + timeStamp);
-    }
-
-    public String[] getTotals() {
-        return new String[]{mLifePickerOne.getText().toString(), mLifePickerTwo.getText().toString(),
-                mPoisonPickerOne.getText().toString(), mPoisonPickerTwo.getText().toString(),
-                mEnergyPickerOne.getText().toString(), mEnergyPickerTwo.getText().toString()};
+    public GameSnapshot getTotals() {
+        return new GameSnapshot(
+                binding.lifePicker1.getText().toString(),
+                binding.lifePicker2.getText().toString(),
+                binding.poisonPicker1.getText().toString(),
+                binding.poisonPicker2.getText().toString(),
+                binding.energyPicker1.getText().toString(),
+                binding.energyPicker2.getText().toString(),
+                System.currentTimeMillis()
+        );
     }
 
 
@@ -822,17 +679,17 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
         PlayerState playerOne = mGameState.getPlayerOne();
         PlayerState playerTwo = mGameState.getPlayerTwo();
 
-        mLifePickerOne.setText(playerOne.getCurrentLife());
-        mLifePickerTwo.setText(playerTwo.getCurrentLife());
-        mPoisonPickerOne.setText(playerOne.getCurrentPoison());
-        mPoisonPickerTwo.setText(playerTwo.getCurrentPoison());
-        mEnergyPickerOne.setText(playerOne.getCurrentEnergy());
-        mEnergyPickerTwo.setText(playerTwo.getCurrentEnergy());
+        binding.lifePicker1.setText(playerOne.getCurrentLife());
+        binding.lifePicker2.setText(playerTwo.getCurrentLife());
+        binding.poisonPicker1.setText(playerOne.getCurrentPoison());
+        binding.poisonPicker2.setText(playerTwo.getCurrentPoison());
+        binding.energyPicker1.setText(playerOne.getCurrentEnergy());
+        binding.energyPicker2.setText(playerTwo.getCurrentEnergy());
     }
 
     private void spinResetArrows() {
-        ImageView leftArrow = findViewById(R.id.update_arrow_left);
-        ImageView rightArrow = findViewById(R.id.update_arrow_right);
+        ImageView leftArrow = binding.updateArrowLeft;
+        ImageView rightArrow = binding.updateArrowRight;
         RotateAnimation r = new RotateAnimation(mCurrentRotation, mCurrentRotation + 180.0f,
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
         r.setDuration((long) 300);
@@ -844,11 +701,7 @@ public class MainActivity extends SensorActivity implements SettingsListAdapter.
     }
 
     private void scaleTextView(TextView view, boolean scaleUp) {
-        Animation scaleAnimation;
-        if (scaleUp)
-            scaleAnimation = AnimationUtils.loadAnimation(this, R.anim.text_scale_up);
-        else
-            scaleAnimation = AnimationUtils.loadAnimation(this, R.anim.text_scale_down);
-        view.startAnimation(scaleAnimation);
+        int anim = scaleUp ? R.anim.text_scale_up : R.anim.text_scale_down;
+        view.startAnimation(AnimationUtils.loadAnimation(this, anim));
     }
 }

@@ -8,4 +8,21 @@
     <style name="NumberPickerTextColorStyle">
         <item name="android:textColorPrimary">@color/light_blue_2020</item>
     </style>
+
+
+    <style name="Picker.Big" parent="">
+        <item name="android:gravity">center</item>
+        <item name="android:minEms">2</item>
+        <item name="android:textSize">100dp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Picker.Small" parent="">
+        <item name="android:gravity">left</item>
+        <item name="android:minEms">2</item>
+        <item name="android:textSize">50dp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+
 </resources>
